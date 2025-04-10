@@ -2,26 +2,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Welcome to OASYS!');
     
-    // Add event listeners to buttons
-    const loginButton = document.querySelector('.btn-login');
-    const signupButton = document.querySelector('.btn-signup');
-    
-    if (loginButton) {
-        loginButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Login button clicked');
-            // Future functionality: Redirect to login page or show login modal
-        });
-    }
-    
-    if (signupButton) {
-        signupButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Sign up button clicked');
-            // Future functionality: Redirect to signup page or show signup modal
-        });
-    }
-    
     // Add a simple animation for the welcome content
     const welcomeContent = document.querySelector('.welcome-content');
     if (welcomeContent) {
@@ -34,5 +14,21 @@ document.addEventListener('DOMContentLoaded', function() {
             welcomeContent.style.opacity = '1';
             welcomeContent.style.transform = 'translateY(0)';
         }, 200);
+    }
+    
+    // Auto-dismiss messages after 5 seconds
+    const messages = document.querySelectorAll('.message');
+    if (messages.length > 0) {
+        setTimeout(function() {
+            messages.forEach(function(message) {
+                message.style.transition = 'opacity 0.5s ease';
+                message.style.opacity = '0';
+                
+                // Remove the message from DOM after fade out
+                setTimeout(function() {
+                    message.remove();
+                }, 500);
+            });
+        }, 5000);
     }
 }); 

@@ -3,32 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}OASYS - Optimized Autonomous System{% endblock %}</title>
+    <title>{% block title %}OASYS - User Authentication{% endblock %}</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'core/css/welcome.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/base_accounts.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <header class="platform-header">
+    <header class="accounts-header">
         <div class="container">
             <div class="brand">
-                <h1>oasys</h1>
+                <h1><a href="{% url 'core:welcome' %}">OASYS</a></h1>
             </div>
             <nav class="main-nav">
-                {% block nav_links %}
                 <ul class="nav-list">
-                    <!-- <li><a href="{% url 'core:welcome' %}" class="nav-link">Home</a></li> -->
+                    <li><a href="{% url 'core:welcome' %}" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a></li>
                     {% if user.is_authenticated %}
-                        <li><a href="{% url 'dashboard:home' %}" class="nav-link">Dashboard</a></li>
+                        <li><a href="{% url 'dashboard:home' %}" class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}">Dashboard</a></li>
                         <li><a href="{% url 'accounts:logout' %}" class="nav-link">Logout</a></li>
+                    {% else %}
+                        <li><a href="{% url 'accounts:login' %}" class="nav-link {% if request.path == '/accounts/login/' %}active{% endif %}">Login</a></li>
+                        <li><a href="{% url 'accounts:signup' %}" class="nav-link {% if request.path == '/accounts/signup/' %}active{% endif %}">Sign Up</a></li>
                     {% endif %}
                 </ul>
-                {% endblock %}
             </nav>
         </div>
     </header>
 
-    <main class="content">
+    <main class="accounts-content">
         <div class="container">
             {% if messages %}
                 <div class="messages">
@@ -45,14 +46,14 @@
         </div>
     </main>
 
-    <footer class="platform-footer">
+    <footer class="accounts-footer">
         <div class="container">
             <p>&copy; {% now "Y" %} OASYS - Optimized Autonomous System</p>
         </div>
     </footer>
 
     {% load static %}
-    <script src="{% static 'core/js/welcome.js' %}"></script>
+    <script src="{% static 'accounts/js/base_accounts.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html> 

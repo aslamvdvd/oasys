@@ -1,0 +1,80 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Profile | OASYS Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h2 class="section-title">User Profile</h2>
+    </div>
+    
+    <div class="profile-content">
+        <div class="profile-image-section">
+            <div class="profile-image">
+                {% if user.profile_image %}
+                    <img src="{{ user.profile_image.url }}" alt="{{ user.get_full_name }}" />
+                {% else %}
+                    <div class="profile-placeholder">
+                        {{ user.get_full_name|slice:":1" }}
+                    </div>
+                {% endif %}
+            </div>
+            <button class="btn btn-upload-image">Upload Image</button>
+        </div>
+        
+        <div class="profile-details">
+            <div class="profile-form">
+                <form method="post" action="{% url 'dashboard:profile' %}">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ user.email }}" readonly class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" value="{{ user.username }}" readonly class="form-control">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="first_name">First Name</label>
+                            <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="last_name">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bio">Bio</label>
+                        <textarea id="bio" name="bio" rows="4" class="form-control">{{ user.bio }}</textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-save">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="account-actions">
+                <h3>Account Actions</h3>
+                <button class="btn btn-change-password">Change Password</button>
+                <button class="btn btn-danger">Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/profile.js' %}"></script>
+{% endblock %} 

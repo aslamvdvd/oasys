@@ -1,0 +1,110 @@
+{% extends 'accounts/base_accounts.html' %}
+{% load static %}
+
+{% block title %}Sign Up - OASYS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container signup-container">
+    <div class="auth-box">
+        <h2 class="auth-title">Create an Account</h2>
+        <p class="auth-subtitle">Join OASYS to start creating and managing your spaces</p>
+        
+        <form method="post" class="auth-form signup-form">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="error-message">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                    {% if form.email.help_text %}
+                        <div class="help-text">{{ form.email.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="error-message">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                    {% if form.username.help_text %}
+                        <div class="help-text">{{ form.username.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row two-columns">
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <div class="error-message">{{ form.first_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <div class="error-message">{{ form.last_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                        <div class="error-message">{{ form.password1.errors.0 }}</div>
+                    {% endif %}
+                    {% if form.password1.help_text %}
+                        <div class="help-text">{{ form.password1.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                        <div class="error-message">{{ form.password2.errors.0 }}</div>
+                    {% endif %}
+                    {% if form.password2.help_text %}
+                        <div class="help-text">{{ form.password2.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if form.non_field_errors %}
+                <div class="non-field-errors">
+                    {% for error in form.non_field_errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-signup">Sign Up</button>
+            </div>
+        </form>
+        
+        <div class="auth-links">
+            <p>Already have an account? <a href="{% url 'accounts:login' %}">Login</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'accounts/js/signup.js' %}"></script>
+{% endblock %} 

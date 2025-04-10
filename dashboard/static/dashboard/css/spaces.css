@@ -1,0 +1,142 @@
+/* Spaces Page Styles */
+
+.spaces-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.spaces-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 15px;
+    margin-bottom: 30px;
+}
+
+.spaces-header .section-title {
+    margin: 0;
+    font-size: 24px;
+    color: #2c3e50;
+}
+
+.btn-create-space {
+    background-color: #2ecc71;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.btn-create-space:hover {
+    background-color: #27ae60;
+}
+
+.spaces-content {
+    padding: 10px 0;
+}
+
+.spaces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+/* Empty Spaces */
+.empty-spaces {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+.empty-spaces-img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+    opacity: 0.6;
+}
+
+.empty-spaces-text {
+    color: #7f8c8d;
+    font-size: 16px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Space Cards */
+.space-card {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.space-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.space-title {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.space-description {
+    color: #7f8c8d;
+    font-size: 14px;
+    flex-grow: 1;
+    margin-bottom: 15px;
+}
+
+.space-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.space-members {
+    font-size: 13px;
+    color: #95a5a6;
+}
+
+.btn-manage {
+    background-color: #3498db;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.btn-manage:hover {
+    background-color: #2980b9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .spaces-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .spaces-header .section-title {
+        margin-bottom: 15px;
+    }
+    
+    .btn-create-space {
+        width: 100%;
+    }
+    
+    .spaces-grid {
+        grid-template-columns: 1fr;
+    }
+} 

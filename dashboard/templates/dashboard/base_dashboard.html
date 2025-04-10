@@ -16,20 +16,30 @@
             </div>
             <nav class="main-nav">
                 <ul class="nav-list">
-                    <li><a href="{% url 'dashboard:home' %}" class="nav-link active">Home</a></li>
-                    <li><a href="#" class="nav-link">Spaces</a></li>
-                    <li><a href="#" class="nav-link">Profile</a></li>
+                    <li><a href="{% url 'dashboard:home' %}" class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}">Home</a></li>
+                    <li><a href="{% url 'dashboard:spaces' %}" class="nav-link {% if request.path == '/dashboard/spaces/' %}active{% endif %}">Spaces</a></li>
+                    <li><a href="{% url 'dashboard:profile' %}" class="nav-link {% if request.path == '/dashboard/profile/' %}active{% endif %}">Profile</a></li>
                 </ul>
             </nav>
             <div class="user-menu">
-                <span class="username">{{ request.user.username }}</span>
-                <a href="#" class="logout-btn">Logout</a>
+                <span class="username">{{ request.user.get_full_name }}</span>
+                <a href="{% url 'accounts:logout' %}" class="logout-btn">Logout</a>
             </div>
         </div>
     </header>
 
     <main class="dashboard-content">
         <div class="container">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
             {% block content %}
             {% endblock %}
         </div>

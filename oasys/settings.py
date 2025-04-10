@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'dashboard',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -131,3 +132,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailBackend',  # custom backend
+    'django.contrib.auth.backends.ModelBackend',  # default backend
+]
