@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}OASYS Dashboard{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="container">
+            <div class="brand">
+                <h1>OASYS</h1>
+            </div>
+            <nav class="main-nav">
+                <ul class="nav-list">
+                    <li><a href="{% url 'dashboard:home' %}" class="nav-link active">Home</a></li>
+                    <li><a href="#" class="nav-link">Spaces</a></li>
+                    <li><a href="#" class="nav-link">Profile</a></li>
+                </ul>
+            </nav>
+            <div class="user-menu">
+                <span class="username">{{ request.user.username }}</span>
+                <a href="#" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-content">
+        <div class="container">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <footer class="dashboard-footer">
+        <div class="container">
+            <p>&copy; {% now "Y" %} OASYS - Optimized Autonomous System</p>
+        </div>
+    </footer>
+
+    {% load static %}
+    <script src="{% static 'dashboard/js/base_dashboard.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

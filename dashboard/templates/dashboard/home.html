@@ -1,0 +1,50 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Home | OASYS Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-home">
+    <section class="welcome-section">
+        <h2 class="welcome-heading">Welcome, {{ request.user.username }}!</h2>
+        <p class="welcome-subtext">Manage your spaces and create new ones</p>
+    </section>
+
+    <section class="create-space-section">
+        <button id="create-space-btn" class="btn btn-create-space">Create Space</button>
+    </section>
+
+    <section class="spaces-section">
+        <h3 class="section-title">Your Spaces</h3>
+        <div class="spaces-grid">
+            <!-- Placeholder for empty state -->
+            <div class="empty-spaces">
+                <img src="{% static 'dashboard/img/empty-spaces.svg' %}" alt="No spaces" class="empty-spaces-img">
+                <p class="empty-spaces-text">You have no spaces yet. Create your first space to get started!</p>
+            </div>
+            
+            <!-- This will be populated with actual spaces dynamically -->
+            <div class="spaces-list" style="display: none;">
+                <!-- Example space card (will be dynamically generated) -->
+                <div class="space-card">
+                    <h4 class="space-title">Space Name</h4>
+                    <p class="space-description">Brief description of the space goes here...</p>
+                    <div class="space-footer">
+                        <span class="space-members">2 members</span>
+                        <a href="#" class="btn btn-small btn-manage">Manage</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/home.js' %}"></script>
+<script src="{% static 'dashboard/js/create_space.js' %}"></script>
+{% endblock %} 
