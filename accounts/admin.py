@@ -8,13 +8,13 @@ class UserAdmin(BaseUserAdmin):
     """
     Custom UserAdmin for our User model.
     """
-    list_display = ('email', 'username', 'first_name', 'last_name', 'is_staff')
+    list_display = ('email', 'username', 'first_name', 'middle_name', 'last_name', 'is_staff')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
-    search_fields = ('email', 'username', 'first_name', 'last_name')
+    search_fields = ('email', 'username', 'first_name', 'middle_name', 'last_name')
     ordering = ('email',)
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        (_('Personal info'), {'fields': ('username', 'first_name', 'last_name')}),
+        (_('Personal info'), {'fields': ('username', 'first_name', 'middle_name', 'last_name', 'bio')}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
@@ -23,7 +23,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'password1', 'password2'),
+            'fields': ('email', 'username', 'first_name', 'middle_name', 'last_name', 'bio', 'password1', 'password2'),
         }),
     )
 

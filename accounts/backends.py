@@ -4,16 +4,18 @@ from django.db.models import Q
 
 User = get_user_model()
 
-class EmailBackend(ModelBackend):
+class EmailOrUsernameBackend(ModelBackend):
     """
-    Custom authentication backend to allow users to log in with their email.
+    Custom authentication backend to allow users to log in with either their email or username.
     """
     def authenticate(self, request, username=None, password=None, **kwargs):
         try:
-            # Check if the username is an email
-            # The username field is used by Django's auth system, but in our form 
-            # we're actually passing an email into this field
-            user = User.objects.get(Q(email__iexact=username))
+            # Check if the provided credential is an email or username
+            # The username parameter is used by Django's auth system, but in our form 
+            # we're actually passing either an email or username into this field
+            user = User.objects.get(
+                Q(email__iexact=username) | Q(username__iexact=username)
+            )
             
             # Check the password
             if user.check_password(password):

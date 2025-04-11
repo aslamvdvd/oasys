@@ -24,12 +24,12 @@
                     </div>
                 {% endif %}
             </div>
-            <button class="btn btn-upload-image">Upload Image</button>
+            <button type="button" class="btn btn-upload-image">Upload Image</button>
         </div>
         
         <div class="profile-details">
             <div class="profile-form">
-                <form method="post" action="{% url 'dashboard:profile' %}">
+                <form method="post" action="{% url 'dashboard:profile' %}" id="profile-form">
                     {% csrf_token %}
                     
                     <div class="form-group">
@@ -45,12 +45,18 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="first_name">First Name</label>
-                            <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}" class="form-control">
+                            <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="middle_name">Middle Name</label>
+                            <input type="text" id="middle_name" name="middle_name" value="{{ user.middle_name }}" class="form-control">
+                            <small class="form-text text-muted">Optional</small>
                         </div>
                         
                         <div class="form-group">
                             <label for="last_name">Last Name</label>
-                            <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}" class="form-control">
+                            <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}" class="form-control" required>
                         </div>
                     </div>
                     
@@ -60,21 +66,116 @@
                     </div>
                     
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-save">Save Changes</button>
+                        <button type="submit" name="action" value="update_profile" class="btn btn-save">Save Changes</button>
                     </div>
                 </form>
             </div>
             
             <div class="account-actions">
                 <h3>Account Actions</h3>
-                <button class="btn btn-change-password">Change Password</button>
-                <button class="btn btn-danger">Delete Account</button>
+                <button type="button" class="btn btn-change-password">Change Password</button>
+                <button type="button" class="btn btn-danger" id="delete-account-btn">Delete Account</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div id="delete-account-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Delete Account</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+            <p>All your data, including your profile, spaces, and related information will be permanently deleted.</p>
+            <p>To confirm deletion, please type <strong>"delete"</strong> in the field below:</p>
+            
+            <form method="post" action="{% url 'dashboard:profile' %}" id="delete-account-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <input type="text" id="delete-confirmation" name="delete_confirmation" class="form-control" placeholder="Type 'delete' to confirm">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" name="action" value="delete_account" class="btn btn-danger" id="confirm-delete-btn" disabled>Confirm Account Deletion</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'dashboard/js/profile.js' %}"></script>
+<script>
+// Improved script to handle the delete account button and modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the delete button and modal elements
+    const deleteButton = document.getElementById('delete-account-btn');
+    const modal = document.getElementById('delete-account-modal');
+    const closeButton = modal.querySelector('.close');
+    const confirmInput = document.getElementById('delete-confirmation');
+    const confirmButton = document.getElementById('confirm-delete-btn');
+    
+    // Function to open modal
+    function openModal() {
+        // Force display block and add the show class
+        modal.style.display = 'block';
+        
+        // Use setTimeout to ensure display:block takes effect before adding show class
+        setTimeout(() => {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }, 10);
+        
+        // Reset confirmation input
+        confirmInput.value = '';
+        confirmButton.disabled = true;
+        
+        console.log('Modal opened, visibility:', getComputedStyle(modal).visibility);
+        console.log('Modal opened, display:', getComputedStyle(modal).display);
+    }
+    
+    // Function to close modal
+    function closeModal() {
+        modal.classList.remove('show');
+        
+        // Use setTimeout to allow the transition to complete
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = ''; // Restore scrolling
+        }, 300);
+    }
+    
+    // Add click handler to delete button
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openModal();
+            return false;
+        });
+    }
+    
+    // Close button handler
+    if (closeButton) {
+        closeButton.addEventListener('click', closeModal);
+    }
+    
+    // Click outside to close
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Handle confirmation input
+    if (confirmInput) {
+        confirmInput.addEventListener('input', function() {
+            confirmButton.disabled = (this.value.toLowerCase() !== 'delete');
+        });
+    }
+});
+</script>
 {% endblock %} 

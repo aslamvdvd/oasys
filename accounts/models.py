@@ -7,7 +7,7 @@ class UserManager(BaseUserManager):
     """
     Custom user manager for the User model.
     """
-    def create_user(self, email, username, password=None, **extra_fields):
+    def create_user(self, email, username, first_name, last_name, password=None, **extra_fields):
         """
         Create and save a regular user with the given email, username and password.
         """
@@ -15,14 +15,25 @@ class UserManager(BaseUserManager):
             raise ValueError(_('The Email field must be set'))
         if not username:
             raise ValueError(_('The Username field must be set'))
+        if not first_name:
+            raise ValueError(_('The First name field must be set'))
+        if not last_name:
+            raise ValueError(_('The Last name field must be set'))
+     
         
         email = self.normalize_email(email)
-        user = self.model(email=email, username=username, **extra_fields)
+        user = self.model(
+            email=email, 
+            username=username, 
+            first_name=first_name, 
+            last_name=last_name, 
+            **extra_fields
+        )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, username, password=None, **extra_fields):
+    def create_superuser(self, email, username, first_name, last_name, password=None, **extra_fields):
         """
         Create and save a superuser with the given email, username and password.
         """
@@ -35,7 +46,7 @@ class UserManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError(_('Superuser must have is_superuser=True.'))
         
-        return self.create_user(email, username, password, **extra_fields)
+        return self.create_user(email, username, first_name, last_name, password, **extra_fields)
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
@@ -43,8 +54,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
     email = models.EmailField(_('email address'), unique=True)
     username = models.CharField(_('username'), max_length=150, unique=True)
-    first_name = models.CharField(_('first name'), max_length=150, blank=True)
-    last_name = models.CharField(_('last name'), max_length=150, blank=True)
+    first_name = models.CharField(_('first name'), max_length=150)
+    middle_name = models.CharField(_('middle name'), max_length=150, blank=True)
+    last_name = models.CharField(_('last name'), max_length=150)
+    bio = models.TextField(_('biography'), blank=True)
     is_staff = models.BooleanField(
         _('staff status'),
         default=False,
@@ -63,7 +76,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     class Meta:
         verbose_name = _('user')
@@ -74,9 +87,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_full_name(self):
         """
-        Return the first_name plus the last_name, with a space in between.
+        Return the first_name plus the middle_name plus the last_name, with a space in between.
         """
-        full_name = f"{self.first_name} {self.last_name}"
+        if self.middle_name:
+            full_name = f"{self.first_name} {self.middle_name} {self.last_name}"
+        else:
+            full_name = f"{self.first_name} {self.last_name}"
         return full_name.strip()
 
     def get_short_name(self):

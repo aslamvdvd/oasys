@@ -11,7 +11,9 @@
 <div class="dashboard-welcome">
     <h2 class="welcome-heading">
         Welcome, 
-        {% if user.first_name or user.last_name %}
+        {% if user.first_name or user.middle_name or user.last_name %}
+            {{ user.first_name }} {{ user.middle_name }} {{ user.last_name }}!
+        {% elif user.first_name or user.last_name %}
             {{ user.first_name }} {{ user.last_name }}!
         {% else %}
             {{ user.username }}!

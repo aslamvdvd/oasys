@@ -24,13 +24,20 @@ class SignupForm(UserCreationForm):
     first_name = forms.CharField(
         label=_("First Name"),
         max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    middle_name = forms.CharField(
+        label=_("Middle Name"),
+        max_length=150,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'}),
+        help_text=_("Optional."),
     )
     last_name = forms.CharField(
         label=_("Last Name"),
         max_length=150,
-        required=False,
+        required=True,
         widget=forms.TextInput(attrs={'class': 'form-control'}),
     )
     password1 = forms.CharField(
@@ -46,7 +53,7 @@ class SignupForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('email', 'username', 'first_name', 'last_name', 'password1', 'password2')
+        fields = ('email', 'username', 'first_name', 'middle_name', 'last_name', 'password1', 'password2')
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -56,12 +63,12 @@ class SignupForm(UserCreationForm):
 
 class LoginForm(AuthenticationForm):
     """
-    Form for user login with email and password.
+    Form for user login with email or username and password.
     """
-    username = forms.EmailField(
-        label=_("Email"),
+    username = forms.CharField(
+        label=_("Email or Username"),
         max_length=254,
-        widget=forms.EmailInput(attrs={'autofocus': True, 'class': 'form-control'}),
+        widget=forms.TextInput(attrs={'autofocus': True, 'class': 'form-control'}),
     )
     password = forms.CharField(
         label=_("Password"),
@@ -69,15 +76,23 @@ class LoginForm(AuthenticationForm):
         widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'class': 'form-control'}),
     )
 
+    error_messages = {
+        'invalid_login': _(
+            "Please enter a correct email/username and password. Note that both "
+            "fields may be case-sensitive."
+        ),
+        'inactive': _("This account is inactive."),
+    }
+
     def clean(self):
-        email = self.cleaned_data.get('username')
+        username = self.cleaned_data.get('username')
         password = self.cleaned_data.get('password')
 
-        if email is not None and password:
-            self.user_cache = authenticate(self.request, email=email, password=password)
+        if username is not None and password:
+            self.user_cache = authenticate(self.request, username=username, password=password)
             if self.user_cache is None:
                 raise forms.ValidationError(
-                    _("Please enter a correct email and password. Note that both fields may be case-sensitive."),
+                    self.error_messages['invalid_login'],
                     code='invalid_login',
                 )
             else:

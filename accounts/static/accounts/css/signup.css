@@ -21,6 +21,20 @@
     margin-bottom: 20px;
 }
 
+/* Two columns layout for form fields */
+.form-row.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* Three columns layout for form fields */
+.form-row.three-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+}
+
 /* Help text styling specifically for signup */
 .signup-form .help-text {
     font-size: 11px;
@@ -78,5 +92,11 @@
     
     .signup-form .help-text {
         font-size: 10px;
+    }
+    
+    .form-row.two-columns,
+    .form-row.three-columns {
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
 } 

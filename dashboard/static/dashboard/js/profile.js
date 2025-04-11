@@ -1,114 +1,181 @@
-// Profile page JavaScript
+// Profile page JavaScript - COMPLETELY REWRITTEN
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Profile page loaded');
+    console.log('Profile page JS loaded');
     
-    // Profile image upload functionality
-    setupImageUpload();
+    // Clean up any existing event listeners
+    clearAllEventListeners();
     
-    // Form validation and submit handling
-    setupFormValidation();
+    // Setup account deletion functionality
+    setupDeleteAccountModal();
     
-    // Change password functionality
-    setupPasswordChange();
-    
-    // Delete account functionality
-    setupDeleteAccount();
-});
-
-// Function to handle profile image uploads
-function setupImageUpload() {
-    const uploadButton = document.querySelector('.btn-upload-image');
-    
-    if (uploadButton) {
-        uploadButton.addEventListener('click', function() {
-            // Create a hidden file input
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            fileInput.style.display = 'none';
-            document.body.appendChild(fileInput);
-            
-            // Trigger click on the file input
-            fileInput.click();
-            
-            // Handle file selection
-            fileInput.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    // In a real implementation, this would upload the file to the server
-                    // For now, we'll just display a message
-                    alert('Image selected: ' + this.files[0].name + '\nThis functionality will be implemented in a future update.');
-                    
-                    // Preview the image
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const profileImage = document.querySelector('.profile-image');
-                        
-                        // If there's a placeholder, replace it with an img element
-                        if (profileImage.querySelector('.profile-placeholder')) {
-                            profileImage.innerHTML = '<img src="' + e.target.result + '" alt="Profile Image">';
-                        } else {
-                            // Otherwise update the existing img
-                            profileImage.querySelector('img').src = e.target.result;
-                        }
-                    };
-                    reader.readAsDataURL(this.files[0]);
-                }
-                
-                // Clean up
-                document.body.removeChild(fileInput);
-            });
-        });
-    }
-}
-
-// Function to handle form validation and submission
-function setupFormValidation() {
-    const profileForm = document.querySelector('.profile-form form');
-    
-    if (profileForm) {
-        profileForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Simple validation
-            const firstName = document.getElementById('first_name').value.trim();
-            const lastName = document.getElementById('last_name').value.trim();
-            
-            if (!firstName || !lastName) {
-                alert('First name and last name are required.');
-                return;
-            }
-            
-            // In a real implementation, this would submit the form to the server
-            // For now, we'll just display a message
-            alert('Profile updated successfully!\nThis functionality will be fully implemented in a future update.');
-        });
-    }
-}
-
-// Function to handle password change
-function setupPasswordChange() {
+    // Setup password change button - just a placeholder
     const passwordButton = document.querySelector('.btn-change-password');
-    
     if (passwordButton) {
         passwordButton.addEventListener('click', function() {
-            // In a real implementation, this would redirect to a password change page
-            // or open a modal dialog
-            alert('Password change functionality will be implemented in a future update.');
+            console.log('Password change requested - not implemented yet');
+            // Removed alert - replace with subtle message
+            const message = document.createElement('div');
+            message.className = 'message info';
+            message.textContent = 'Password change functionality will be implemented in a future update.';
+            document.querySelector('.messages') ? 
+                document.querySelector('.messages').appendChild(message) : 
+                document.querySelector('.dashboard-content .container').prepend(message);
+            
+            // Auto-remove the message after 5 seconds
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => message.remove(), 500);
+            }, 5000);
         });
+    }
+    
+    // Setup profile image upload - just a placeholder
+    const uploadButton = document.querySelector('.btn-upload-image');
+    if (uploadButton) {
+        uploadButton.addEventListener('click', function() {
+            console.log('Image upload requested - not implemented yet');
+            // Removed alert - replace with subtle message
+            const message = document.createElement('div');
+            message.className = 'message info';
+            message.textContent = 'Image upload will be implemented in a future update.';
+            document.querySelector('.messages') ? 
+                document.querySelector('.messages').appendChild(message) : 
+                document.querySelector('.dashboard-content .container').prepend(message);
+            
+            // Auto-remove the message after 5 seconds
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => message.remove(), 500);
+            }, 5000);
+        });
+    }
+    
+    // Remove any duplicate delete account UI
+    removeDuplicateDeleteUI();
+});
+
+// Function to remove all existing event listeners by replacing elements
+function clearAllEventListeners() {
+    // Clear delete button event listeners
+    const deleteButton = document.getElementById('delete-account-btn');
+    if (deleteButton) {
+        const newDeleteButton = deleteButton.cloneNode(true);
+        deleteButton.parentNode.replaceChild(newDeleteButton, deleteButton);
+        console.log('Cleared delete button event listeners');
+    }
+    
+    // Clear all other buttons that might have alerts
+    document.querySelectorAll('button').forEach(button => {
+        if (button.textContent.includes('Delete Account') && button.id !== 'delete-account-btn') {
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+        }
+    });
+}
+
+// Function to remove any duplicate delete account UI
+function removeDuplicateDeleteUI() {
+    // Look for any delete account sections outside the modal
+    document.querySelectorAll('h3, div, button').forEach(el => {
+        // Check if it's a heading or div with "Delete Account" text
+        if (el.textContent.includes('Delete Account') && 
+            !el.closest('#delete-account-modal') && 
+            !el.closest('.account-actions') &&
+            el.id !== 'delete-account-btn') {
+            
+            // Found a duplicate delete account section
+            console.log('Found duplicate delete account section - removing');
+            const section = el.closest('div');
+            if (section && section.parentNode) {
+                section.parentNode.removeChild(section);
+            }
+        }
+    });
+    
+    // More aggressive approach - target the specific layout in the screenshot
+    // Look for divs with "Delete Account" heading directly under main content
+    document.querySelectorAll('.dashboard-content > .container > div').forEach(div => {
+        if (div !== document.querySelector('.profile-container') && 
+            (div.querySelector('h3') && div.querySelector('h3').textContent.includes('Delete Account'))) {
+            console.log('Found another duplicate section - removing');
+            div.parentNode.removeChild(div);
+        }
+    });
+    
+    // Most aggressive approach - look for elements at specific locations
+    // Look for standalone Delete Account headings and buttons below the profile container
+    const profileContainer = document.querySelector('.profile-container');
+    if (profileContainer) {
+        let next = profileContainer.nextElementSibling;
+        while (next) {
+            const current = next;
+            next = current.nextElementSibling;
+            
+            // If this element has "Delete Account" text, remove it
+            if (current.textContent.includes('Delete Account') || 
+                current.textContent.includes('delete') || 
+                current.textContent.includes('Delete')) {
+                console.log('Found content below profile container - removing');
+                current.parentNode.removeChild(current);
+            }
+        }
     }
 }
 
-// Function to handle account deletion
-function setupDeleteAccount() {
-    const deleteButton = document.querySelector('.btn-danger');
+// Function to handle the delete account modal
+function setupDeleteAccountModal() {
+    // Get fresh references to elements after clearing event listeners
+    const deleteButton = document.getElementById('delete-account-btn');
+    const deleteModal = document.getElementById('delete-account-modal');
+    const closeButton = deleteModal.querySelector('.close');
+    const confirmInput = document.getElementById('delete-confirmation');
+    const confirmButton = document.getElementById('confirm-delete-btn');
     
-    if (deleteButton) {
-        deleteButton.addEventListener('click', function() {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                // In a real implementation, this would send a request to delete the account
-                alert('Account deletion functionality will be implemented in a future update.');
+    // Open modal when delete button is clicked
+    if (deleteButton && deleteModal) {
+        // Add the ONLY event listener for the delete button
+        deleteButton.addEventListener('click', function(e) {
+            // Stop any other event handlers
+            e.stopPropagation();
+            e.preventDefault();
+            
+            console.log('Delete button clicked - showing modal ONLY');
+            
+            // Show the modal
+            deleteModal.classList.add('show');
+            
+            // Clear any previous confirmation text
+            if (confirmInput) {
+                confirmInput.value = '';
+                confirmButton.disabled = true;
             }
+            
+            // Return false to prevent any default actions
+            return false;
+        });
+    }
+    
+    // Close modal when close button is clicked
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            deleteModal.classList.remove('show');
+            confirmInput.value = '';
+        });
+    }
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === deleteModal) {
+            deleteModal.classList.remove('show');
+            confirmInput.value = '';
+        }
+    });
+    
+    // Enable/disable confirm button based on input value
+    if (confirmInput && confirmButton) {
+        confirmInput.addEventListener('input', function() {
+            confirmButton.disabled = (this.value.toLowerCase() !== 'delete');
         });
     }
 } 

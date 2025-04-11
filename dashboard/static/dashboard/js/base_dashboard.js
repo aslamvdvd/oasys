@@ -3,27 +3,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Dashboard loaded');
     
-    // Remove any duplicate active classes from navigation links
-    // Only one link should have the active class
-    const navLinks = document.querySelectorAll('.nav-link');
-    const activeLinks = document.querySelectorAll('.nav-link.active');
-    
-    // If there's more than one active link, remove all active classes
-    // and let the template-defined one remain
-    if (activeLinks.length > 1) {
-        navLinks.forEach(link => {
-            link.classList.remove('active');
-        });
-        
-        // The template-defined active link will be re-applied
-        const currentPath = window.location.pathname;
-        navLinks.forEach(link => {
-            const linkPath = link.getAttribute('href');
-            if (linkPath === currentPath) {
-                link.classList.add('active');
-            }
-        });
-    }
+    // Set active class on navigation links based on current URL
+    setActiveNavLink();
     
     // Auto-dismiss messages after 5 seconds
     const messages = document.querySelectorAll('.message');
@@ -44,6 +25,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize responsive menu for mobile
     setupResponsiveHeader();
 });
+
+// Function to set active class on the correct navigation link
+function setActiveNavLink() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const currentPath = window.location.pathname;
+    
+    // First, remove all active classes
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    // Then set active class only on the link that matches current path
+    navLinks.forEach(link => {
+        const linkPath = link.getAttribute('href');
+        if (linkPath === currentPath) {
+            link.classList.add('active');
+        }
+    });
+}
 
 // Function to handle responsive header behavior
 function setupResponsiveHeader() {

@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 
 from .forms import SignupForm, LoginForm
 from .models import User
-from .backends import EmailBackend
+from .backends import EmailOrUsernameBackend
 
 class SignupView(CreateView):
     """
@@ -30,12 +30,13 @@ class SignupView(CreateView):
         password = form.cleaned_data.get('password1')
         
         # Use our custom backend
-        backend = EmailBackend()
+        backend = EmailOrUsernameBackend()
         user = backend.authenticate(self.request, username=email, password=password)
         
         if user is not None:
-            login(self.request, user)
-            messages.success(self.request, _("Account created successfully. Welcome to OASYS!"))
+            # Explicitly specify the backend to use
+            login(self.request, user, backend='accounts.backends.EmailOrUsernameBackend')
+            messages.success(self.request, "Account created successfully. Welcome to OASYS!")
         
         return response
 
