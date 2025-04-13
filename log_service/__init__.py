@@ -17,3 +17,11 @@ from log_service.events import (
     get_event_type_description,
     get_registered_events
 )
+
+# Make admin logging functions directly importable
+from log_service.admin_logger import (
+    log_admin_action,
+    log_admin_addition,
+    log_admin_change,
+    log_admin_deletion
+)

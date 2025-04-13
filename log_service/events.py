@@ -34,6 +34,24 @@ EVENT_TYPES = {
     'engine': {
         'description': 'Backend processing and computational events',
         'registered_events': set()
+    },
+    'templator': {
+        'description': 'Template management events such as uploads, extractions, and deletions',
+        'registered_events': {
+            'template_uploaded', 'template_error', 'template_deleted'
+        }
+    },
+    'admin': {
+        'description': 'Admin interface activity logging',
+        'registered_events': {
+            'admin_added', 'admin_changed', 'admin_deleted', 'admin_access'
+        }
+    },
+    'templator_activity': {
+        'description': 'General templator app activity (duplicate of templator for backward compatibility)',
+        'registered_events': {
+            'template_uploaded', 'template_error', 'template_deleted'
+        }
     }
 }
 

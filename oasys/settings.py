@@ -66,10 +66,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core',
-    'dashboard',
-    'accounts',
+    'core',  # Core app
+    'dashboard',  # Dashboard app
+    'accounts',  # Accounts app
     'log_service',  # System logging service
+    'templator',  # Template management app
 ]
 
 MIDDLEWARE = [
@@ -80,6 +81,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'log_service.middleware.AdminActivityMiddleware',  # Admin activity logging
 ]
 
 ROOT_URLCONF = 'oasys.urls'

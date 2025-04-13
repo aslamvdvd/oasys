@@ -71,7 +71,9 @@ logs/
 │   ├── user_activity.log
 │   ├── space_activity.log
 │   ├── social_media.log
-│   └── engine.log
+│   ├── engine.log
+│   ├── templator.log   <-- Template operations
+│   └── admin.log       <-- Admin interface actions
 ├── failures.log
 └── event_registry.json
 ```
@@ -129,6 +131,39 @@ python manage.py manage_events add-event api_calls api_request
 - `social_media`: Social media integrations and activities
 - `engine`: Backend processing and computational activities
 - *Any new event type*: The system automatically registers new event types when encountered
+
+## Specialized Log Types
+
+In addition to general logging, the log_service provides specialized logging for specific components:
+
+### Admin Logging
+
+The `admin_logger` module provides specialized logging for admin interface actions:
+
+```python
+from log_service import log_admin_addition, log_admin_change, log_admin_deletion
+
+# In your ModelAdmin class:
+def save_model(self, request, obj, form, change):
+    """Override save_model to log admin actions."""
+    super().save_model(request, obj, form, change)
+    
+    if change:
+        log_admin_change(request.user, obj, f"Object {obj} was updated")
+    else:
+        log_admin_addition(request.user, obj, f"Object {obj} was created")
+
+def delete_model(self, request, obj):
+    """Override delete_model to log admin actions."""
+    super().delete_model(request, obj)
+    log_admin_deletion(request.user, obj, f"Object {obj} was deleted")
+```
+
+Admin logs are stored in the `admin.log` file in the date-based directory structure (`logs/YYYY-MM-DD/admin.log`).
+
+### Templator Logging
+
+The templator app has specialized logging in the `templator.log` file in the date-based directory structure.
 
 ## Implementation Notes
 

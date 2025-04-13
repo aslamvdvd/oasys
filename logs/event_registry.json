@@ -2,13 +2,14 @@
   "user_activity": {
     "description": "User-related events such as login, logout, registration, profile updates",
     "registered_events": [
-      "user_created",
-      "logout",
-      "login",
-      "account_deleted",
       "profile_update",
+      "test_log",
       "login_failed",
-      "dashboard_visit"
+      "login",
+      "dashboard_visit",
+      "logout",
+      "account_deleted",
+      "user_created"
     ]
   },
   "space_activity": {
@@ -22,5 +23,32 @@
   "engine": {
     "description": "Backend processing and computational events",
     "registered_events": []
+  },
+  "templator": {
+    "description": "Template management events such as uploads, extractions, and deletions",
+    "registered_events": [
+      "template_error",
+      "test_log",
+      "template_deleted",
+      "template_uploaded"
+    ]
+  },
+  "admin": {
+    "description": "Admin interface activity logging",
+    "registered_events": [
+      "test_log",
+      "admin_deleted",
+      "admin_access",
+      "admin_added",
+      "admin_changed"
+    ]
+  },
+  "templator_activity": {
+    "description": "General templator app activity (duplicate of templator for backward compatibility)",
+    "registered_events": [
+      "template_error",
+      "template_deleted",
+      "template_uploaded"
+    ]
   }
 }
