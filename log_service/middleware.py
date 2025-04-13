@@ -2,110 +2,176 @@
 Middleware for logging administrative actions.
 """
 import re
+import logging
 from django.urls import resolve
 from django.utils import timezone
+from django.contrib.auth import user_logged_out
+from django.contrib.auth.signals import user_login_failed
+from django.dispatch import receiver
 
 from log_service import log_event
 
+logger = logging.getLogger(__name__)
+
+@receiver(user_logged_out)
+def log_user_logout(sender, request, user, **kwargs):
+    if user and request and request.path.startswith('/admin/'):
+        log_event('admin', {
+            'event': 'admin_logout',
+            'user': user.username,
+            'action': 'logout',
+            'target': 'admin.session',
+            'object_id': '',
+            'method': request.method,
+            'status': 200,
+            'timestamp': timezone.now().isoformat()
+        })
+
+@receiver(user_login_failed)
+def log_user_login_failed(sender, credentials, **kwargs):
+    try:
+        request = kwargs.get('request')
+        if request and request.path.startswith('/admin/'):
+            username = credentials.get('username', '')
+            log_event('admin', {
+                'event': 'admin_login_failed',
+                'user': username,
+                'action': 'login_failed',
+                'target': 'admin.session',
+                'object_id': '',
+                'method': request.method,
+                'status': 401,
+                'timestamp': timezone.now().isoformat()
+            })
+            logger.info(f"Logging admin login failed for user: {username}")
+    except Exception as e:
+        logger.error(f"Error in login_failed signal handler: {str(e)}")
+
 class AdminActivityMiddleware:
-    """
-    Middleware to log admin activity and page access.
-    
-    This middleware tracks access to admin pages and logs it to admin.log
-    """
-    
+    admin_patterns = [
+        (r'^/admin/(\w+)/(\w+)/(\d+)/change/', 'edit_object'),
+        (r'^/admin/(\w+)/(\w+)/(\d+)/delete/', 'delete_object'),
+        (r'^/admin/(\w+)/(\w+)/add/', 'add_object'),
+        (r'^/admin/(\w+)/(\w+)/', 'view_object_list'),
+        (r'^/admin/login/', 'login'),
+        (r'^/admin/logout/', 'logout'),
+        (r'^/admin/$', 'view_dashboard'),  # Match only the exact admin root
+        (r'^/admin/', 'other')  # Catch-all for anything else under admin
+    ]
+    skip_patterns = ['/admin/jsi18n/', '/admin/autocomplete/', '/static/', '/favicon.ico']
+
     def __init__(self, get_response):
         self.get_response = get_response
-        # Admin URL patterns to track (more specific ones first)
-        self.admin_patterns = [
-            (r'^/admin/(\w+)/(\w+)/(\d+)/change/', 'view_edit_form'),
-            (r'^/admin/(\w+)/(\w+)/(\d+)/delete/', 'view_delete_form'),
-            (r'^/admin/(\w+)/(\w+)/add/', 'view_add_form'),
-            (r'^/admin/(\w+)/(\w+)/', 'view_object_list'),
-            (r'^/admin/$', 'view_admin_index'),
-            (r'^/admin/login/', 'admin_login')
-        ]
-        
+
     def __call__(self, request):
-        # Skip logging for static files, AJAX, etc.
-        if not self._should_log(request):
-            return self.get_response(request)
-        
-        # Check if the request path matches admin patterns
-        admin_info = self._get_admin_info(request)
-        
-        # Process the request and get the response
         response = self.get_response(request)
+
+        # Track failed login attempts
+        if request.path.startswith('/admin/login/') and request.method == 'POST' and not request.user.is_authenticated and response.status_code == 200:
+            username = request.POST.get('username', '')
+            if username:
+                logger.info(f"Detected failed admin login attempt for user: {username}")
+                log_event('admin', {
+                    'event': 'admin_login_failed',
+                    'user': username,
+                    'action': 'login_failed',
+                    'target': 'admin.session',
+                    'object_id': '',
+                    'method': request.method,
+                    'status': 401,
+                    'timestamp': timezone.now().isoformat()
+                })
         
-        # Log admin activity if relevant
-        if admin_info and request.user.is_authenticated:
-            log_data = {
-                'event': 'admin_access',
-                'user_id': request.user.id,
-                'username': request.user.username,
-                'path': request.path,
+        # Track successful logins (when user is authenticated and redirected)
+        if request.path.startswith('/admin/login/') and request.method == 'POST' and request.user.is_authenticated and response.status_code == 302:
+            logger.info(f"Detected successful admin login for user: {request.user.username}")
+            log_event('admin', {
+                'event': 'admin_login',
+                'user': request.user.username,
+                'action': 'login',
+                'target': 'admin.session',
+                'object_id': '',
                 'method': request.method,
-                'action_type': admin_info['action_type'],
-                'app_label': admin_info.get('app_label', ''),
-                'model_name': admin_info.get('model_name', ''),
+                'status': response.status_code,
+                'timestamp': timezone.now().isoformat()
+            })
+            return response  # Skip further processing for login success
+
+        if not self._should_log(request, response):
+            return response
+
+        admin_info = self._get_admin_info(request)
+        if admin_info and request.user.is_authenticated:
+            event_name = self._get_event_name(admin_info['action_type'], request.method)
+            log_data = {
+                'event': event_name,
+                'user': request.user.username,
+                'action': admin_info['action_type'],
+                'target': f"{admin_info.get('app_label', '')}.{admin_info.get('model_name', '')}",
                 'object_id': admin_info.get('object_id', ''),
-                'status_code': response.status_code,
+                'method': request.method,
+                'status': response.status_code,
                 'timestamp': timezone.now().isoformat()
             }
-            
             log_event('admin', log_data)
-        
+
         return response
-    
-    def _should_log(self, request):
-        """
-        Determine if we should log this request.
-        Skip static files, AJAX requests, etc.
-        """
-        # Skip if not an admin URL
+
+    def _should_log(self, request, response):
         if not request.path.startswith('/admin/'):
             return False
-        
-        # Skip jsi18n requests
-        if '/admin/jsi18n/' in request.path:
+        if any(pattern in request.path for pattern in self.skip_patterns):
             return False
-        
-        # Skip static file requests
-        if '/static/' in request.path:
-            return False
-        
-        # Skip API and AJAX requests
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return False
-        
-        return True
-    
+        if request.path.startswith('/admin/login/') and request.method == 'POST':
+            return True
+        if request.method == 'GET':
+            return not re.search(r'/admin/.*\.', request.path) and response.status_code == 200
+        elif request.method == 'POST':
+            return response.status_code in [200, 201, 302]
+        return False
+
+    def _get_event_name(self, action_type, method):
+        """
+        Get a clear event name based on action type and method.
+        """
+        # For successful logins (POST requests)
+        if method == 'POST':
+            if action_type == 'add_object':
+                return 'object_created'
+            elif action_type == 'edit_object':
+                return 'object_updated'
+            elif action_type == 'delete_object':
+                return 'object_deleted'
+            elif action_type == 'login':
+                return 'admin_login'
+            elif action_type == 'logout':
+                return 'admin_logout'
+        # For GET requests, properly name the views
+        elif method == 'GET':
+            if action_type == 'view_dashboard':
+                return 'admin_view_dashboard'
+            elif action_type == 'login':
+                return 'admin_login_page'  # Viewing the login page
+            
+        # Default pattern for other actions
+        return f"admin_{action_type}"
+
     def _get_admin_info(self, request):
-        """
-        Extract information about the admin action from the request path.
-        
-        Returns:
-            dict with action_type and other relevant info, or None if not an admin URL
-        """
         path = request.path
-        
         for pattern, action_type in self.admin_patterns:
             match = re.match(pattern, path)
             if match:
                 info = {'action_type': action_type}
-                
-                # Extract app_label, model_name, and object_id if available
-                if len(match.groups()) >= 2:
-                    info['app_label'] = match.group(1)
-                    info['model_name'] = match.group(2)
-                
-                if len(match.groups()) >= 3:
-                    info['object_id'] = match.group(3)
-                
+                groups = match.groups()
+                if len(groups) >= 2:
+                    info['app_label'] = groups[0]
+                    info['model_name'] = groups[1]
+                if len(groups) >= 3:
+                    info['object_id'] = groups[2]
                 return info
-        
-        # If we get here, it's an admin URL we're not specifically tracking
         if path.startswith('/admin/'):
-            return {'action_type': 'other_admin_access'}
-        
-        return None 
+            return {'action_type': 'other'}
+        return None
+
+user_logged_out.connect(log_user_logout)
+user_login_failed.connect(log_user_login_failed)

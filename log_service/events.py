@@ -44,7 +44,10 @@ EVENT_TYPES = {
     'admin': {
         'description': 'Admin interface activity logging',
         'registered_events': {
-            'admin_added', 'admin_changed', 'admin_deleted', 'admin_access'
+            'admin_added', 'admin_changed', 'admin_deleted', 'admin_access',
+            'object_created', 'object_updated', 'object_deleted',
+            'admin_view_dashboard', 'admin_view_object_list', 'admin_edit_object',
+            'admin_delete_object', 'admin_add_object', 'admin_login', 'admin_login_failed', 'admin_logout', 'admin_other'
         }
     },
     'templator_activity': {

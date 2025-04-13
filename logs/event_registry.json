@@ -2,14 +2,14 @@
   "user_activity": {
     "description": "User-related events such as login, logout, registration, profile updates",
     "registered_events": [
-      "profile_update",
-      "test_log",
-      "login_failed",
       "login",
-      "dashboard_visit",
       "logout",
+      "dashboard_visit",
       "account_deleted",
-      "user_created"
+      "profile_update",
+      "user_created",
+      "login_failed",
+      "test_log"
     ]
   },
   "space_activity": {
@@ -36,11 +36,23 @@
   "admin": {
     "description": "Admin interface activity logging",
     "registered_events": [
-      "test_log",
-      "admin_deleted",
+      "admin_login",
+      "admin_other",
+      "object_created",
+      "admin_delete_object",
       "admin_access",
+      "admin_view_dashboard",
       "admin_added",
-      "admin_changed"
+      "admin_view_object_list",
+      "test_log",
+      "object_updated",
+      "admin_deleted",
+      "object_deleted",
+      "admin_login_failed",
+      "admin_changed",
+      "admin_add_object",
+      "admin_logout",
+      "admin_edit_object"
     ]
   },
   "templator_activity": {

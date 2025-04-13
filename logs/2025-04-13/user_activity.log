@@ -16,3 +16,6 @@
 {"event": "dashboard_visit", "user_id": 8, "username": "aslam", "email": "aslam.aslam93@gmail.com", "details": "User visited the main dashboard", "timestamp": "2025-04-13T14:22:21.501268"}
 {"event": "logout", "user_id": 8, "username": "aslam", "email": "aslam.aslam93@gmail.com", "method": "explicit_logout", "details": "User explicitly logged out", "timestamp": "2025-04-13T14:22:24.967696"}
 {"event": "test_log", "message": "Test log entry for user_activity", "timestamp": "2025-04-13T15:19:42.480423"}
+{"event": "login", "user_id": 8, "username": "aslam", "email": "aslam.aslam93@gmail.com", "method": "form_login", "details": "User logged in successfully via login form", "timestamp": "2025-04-13T16:09:42.296780"}
+{"event": "dashboard_visit", "user_id": 8, "username": "aslam", "email": "aslam.aslam93@gmail.com", "details": "User visited the main dashboard", "timestamp": "2025-04-13T16:09:42.321031"}
+{"event": "logout", "user_id": 8, "username": "aslam", "email": "aslam.aslam93@gmail.com", "method": "explicit_logout", "details": "User explicitly logged out", "timestamp": "2025-04-13T16:09:51.655364"}
