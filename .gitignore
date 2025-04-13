@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+*.db
+
+# Environment variables
+.env
+.env.*
+!.env.template
+
+# Virtual Environments
+venv/
+env/
+ENV/
+oasys_env/
+.venv/
+virtualenv/
+
+# IDE - VS Code
+.vscode/
+.history
+*.code-workspace
+
+# Static & Media files
+staticfiles/
+media/
+static/admin/
+static/rest_framework/
+
+# Logs
+logs/
+event_registry.json
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+
+# Cache
+.sass-cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backup files
+*.bak
+*.swp
+*~ 

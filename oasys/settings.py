@@ -18,12 +18,31 @@ env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=(str, ''),
     DATABASE_URL=(str, 'sqlite:///db.sqlite3'),
+    LOGS_PATH=(str, None),
+    MEDIA_ROOT_PATH=(str, None),
+    STATIC_ROOT_PATH=(str, None),
+    TEMPLATE_UPLOAD_PATH=(str, None),
 )
 environ.Env.read_env()  # Read the .env file
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# File Storage Paths
+# These paths can be overridden using environment variables
+LOGS_DIR = Path(env('LOGS_PATH')) if env('LOGS_PATH') else BASE_DIR / 'logs'
+MEDIA_ROOT = Path(env('MEDIA_ROOT_PATH')) if env('MEDIA_ROOT_PATH') else BASE_DIR / 'media'
+STATIC_ROOT = Path(env('STATIC_ROOT_PATH')) if env('STATIC_ROOT_PATH') else BASE_DIR / 'staticfiles'
+TEMPLATE_UPLOAD_PATH = Path(env('TEMPLATE_UPLOAD_PATH')) if env('TEMPLATE_UPLOAD_PATH') else BASE_DIR / 'templates_store'
+
+# Create necessary directories with error handling
+for directory in [LOGS_DIR, MEDIA_ROOT, STATIC_ROOT, TEMPLATE_UPLOAD_PATH]:
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        import sys
+        print(f"Warning: Could not create directory {directory}: {e}", file=sys.stderr)
 
 
 # Quick-start development settings - unsuitable for production
@@ -50,6 +69,7 @@ INSTALLED_APPS = [
     'core',
     'dashboard',
     'accounts',
+    'log_service',  # System logging service
 ]
 
 MIDDLEWARE = [
@@ -126,7 +146,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = env('STATIC_URL', default='static/')
+MEDIA_URL = env('MEDIA_URL', default='media/')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

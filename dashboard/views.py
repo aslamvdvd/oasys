@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.db import transaction
 
+from log_service import log_event
+
 # Create your views here.
 
 @login_required
@@ -18,6 +20,16 @@ def home(request):
         'user': request.user,
         # Additional context variables would go here
     }
+    
+    # Log the dashboard visit
+    log_event('user_activity', {
+        'event': 'dashboard_visit',
+        'user_id': request.user.id,
+        'username': request.user.username,
+        'email': request.user.email,
+        'details': 'User visited the main dashboard'
+    })
+    
     return render(request, 'dashboard/home.html', context)
 
 @login_required
@@ -36,6 +48,13 @@ def profile(request):
             # Handle profile update
             print("Processing profile update")
             with transaction.atomic():
+                # Store old values for logging
+                old_first_name = user.first_name
+                old_middle_name = user.middle_name
+                old_last_name = user.last_name
+                old_bio = user.bio
+                
+                # Update user profile
                 user.first_name = request.POST.get('first_name', '')
                 user.middle_name = request.POST.get('middle_name', '')
                 user.last_name = request.POST.get('last_name', '')
@@ -46,6 +65,34 @@ def profile(request):
                 print("User profile saved successfully")
                 
                 messages.success(request, "Profile updated successfully!")
+                
+                # Log the profile update
+                log_event('user_activity', {
+                    'event': 'profile_update',
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'changes': {
+                        'first_name': {
+                            'old': old_first_name,
+                            'new': user.first_name
+                        },
+                        'middle_name': {
+                            'old': old_middle_name,
+                            'new': user.middle_name
+                        },
+                        'last_name': {
+                            'old': old_last_name,
+                            'new': user.last_name
+                        },
+                        'bio': {
+                            'old': old_bio,
+                            'new': user.bio
+                        }
+                    },
+                    'details': 'User updated their profile information'
+                })
+                
                 return redirect('dashboard:profile')
                 
         elif action == 'delete_account':
@@ -57,6 +104,7 @@ def profile(request):
                 # Get the user ID before deletion for logging purposes
                 user_id = user.id
                 user_email = user.email
+                username = user.username
                 print(f"Deleting user {user_id} ({user_email})")
                 
                 # Log the user out first
@@ -68,6 +116,15 @@ def profile(request):
                 
                 # Add a success message
                 messages.success(request, "Your account has been permanently deleted.")
+                
+                # Log the account deletion
+                log_event('user_activity', {
+                    'event': 'account_deleted',
+                    'user_id': user_id,
+                    'username': username,
+                    'email': user_email,
+                    'details': 'User permanently deleted their account'
+                })
                 
                 # Redirect to the welcome page
                 return redirect('core:welcome')

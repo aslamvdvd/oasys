@@ -1,0 +1,26 @@
+{
+  "user_activity": {
+    "description": "User-related events such as login, logout, registration, profile updates",
+    "registered_events": [
+      "user_created",
+      "logout",
+      "login",
+      "account_deleted",
+      "profile_update",
+      "login_failed",
+      "dashboard_visit"
+    ]
+  },
+  "space_activity": {
+    "description": "Space-related events such as creation, updates, deletion, sharing",
+    "registered_events": []
+  },
+  "social_media": {
+    "description": "Social media integration-related events like sharing, posting, connections",
+    "registered_events": []
+  },
+  "engine": {
+    "description": "Backend processing and computational events",
+    "registered_events": []
+  }
+}

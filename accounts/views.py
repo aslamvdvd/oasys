@@ -8,6 +8,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 
+from log_service import log_event
 from .forms import SignupForm, LoginForm
 from .models import User
 from .backends import EmailOrUsernameBackend
@@ -37,6 +38,17 @@ class SignupView(CreateView):
             # Explicitly specify the backend to use
             login(self.request, user, backend='accounts.backends.EmailOrUsernameBackend')
             messages.success(self.request, "Account created successfully. Welcome to OASYS!")
+            
+            # Log the user creation and login
+            log_event('user_activity', {
+                'event': 'user_created',
+                'user_id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'details': 'New user account created and logged in'
+            })
         
         return response
 
@@ -71,11 +83,33 @@ class CustomLoginView(LoginView):
         # Add success message after login
         messages.success(self.request, "Successfully logged in. Welcome back!")
         
+        # Log the successful login event
+        log_event('user_activity', {
+            'event': 'login',
+            'user_id': self.request.user.id,
+            'username': self.request.user.username,
+            'email': self.request.user.email,
+            'method': 'form_login',
+            'details': 'User logged in successfully via login form'
+        })
+        
         return response
 
     def form_invalid(self, form):
         response = super().form_invalid(form)
         messages.error(self.request, "Login failed. Please check your credentials.")
+        
+        # Log the failed login attempt if username/email was provided
+        username = form.cleaned_data.get('username', '')
+        if username:
+            log_event('user_activity', {
+                'event': 'login_failed',
+                'username_or_email': username,
+                'method': 'form_login',
+                'reason': 'Invalid credentials',
+                'details': 'Login attempt failed with provided username/email'
+            })
+        
         return response
 
 class CustomLogoutView(View):
@@ -90,7 +124,22 @@ class CustomLogoutView(View):
             pass
         
         if request.user.is_authenticated:
+            # Log the logout event before actually logging out
+            user_id = request.user.id
+            username = request.user.username
+            email = request.user.email
+            
             logout(request)
             messages.success(request, "You have been logged out successfully.")
+            
+            # Log the logout event
+            log_event('user_activity', {
+                'event': 'logout',
+                'user_id': user_id,
+                'username': username,
+                'email': email,
+                'method': 'explicit_logout',
+                'details': 'User explicitly logged out'
+            })
         
         return redirect(reverse_lazy('core:welcome'))
