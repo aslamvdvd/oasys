@@ -61,19 +61,34 @@ def validate_zip_contents(zip_file):
     try:
         with zipfile.ZipFile(zip_file, 'r') as zip_ref:
             # Get a list of all directories in the zip
-            directories = {item.filename.split('/')[0] for item in zip_ref.infolist() 
-                          if item.filename.endswith('/') or '/' in item.filename}
+            all_entries = [item.filename for item in zip_ref.infolist()]
             
-            # Check if all required folders exist
-            missing_folders = [folder for folder in required_folders if folder not in directories]
+            # Check the structure - either top-level directories or inside a parent folder
+            # First, check if the required folders exist directly
+            folder_exists = {}
+            for required in required_folders:
+                direct_match = any(entry.startswith(f"{required}/") for entry in all_entries)
+                
+                # If not at top level, check if they exist within a parent folder
+                nested_match = any(f"/{required}/" in entry or entry.endswith(f"/{required}/") for entry in all_entries)
+                
+                folder_exists[required] = direct_match or nested_match
+            
+            # Identify missing folders
+            missing_folders = [folder for folder, exists in folder_exists.items() if not exists]
             
             if missing_folders:
                 missing = ', '.join(missing_folders)
+                _log_error(f"ZIP validation failed - missing folders: {missing}")
+                _log_error(f"ZIP file structure: {all_entries[:10]}...")
                 raise ValidationError(_(f"The ZIP file is missing required folders: {missing}"))
             
             return True
     except zipfile.BadZipFile:
         raise ValidationError(_("The uploaded file is not a valid ZIP archive."))
+    except ValidationError:
+        # Re-raise ValidationError without additional wrapping
+        raise
     except Exception as e:
         _log_error(f"Error validating ZIP contents: {str(e)}")
         raise ValidationError(_("An error occurred while validating the ZIP file."))
@@ -81,6 +96,7 @@ def validate_zip_contents(zip_file):
 def extract_template_zip(zip_file_path, extraction_path):
     """
     Extract the ZIP file to the specified path.
+    Handle nested directories by extracting the contents of the root directory directly.
     
     Args:
         zip_file_path: Path to the ZIP file
@@ -93,9 +109,36 @@ def extract_template_zip(zip_file_path, extraction_path):
         # Create the extraction directory
         create_template_directory(extraction_path)
         
-        # Extract the ZIP file
-        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-            zip_ref.extractall(extraction_path)
+        # Create a temporary directory for initial extraction
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Extract the ZIP file to temp directory first
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_path)
+            
+            # Get the root directory from the zip (if there is one)
+            root_items = list(temp_path.iterdir())
+            
+            # If there's only one item and it's a directory, that's our root
+            if len(root_items) == 1 and root_items[0].is_dir():
+                root_dir = root_items[0]
+                
+                # Move contents from the root directory to the final extraction path
+                for item in root_dir.iterdir():
+                    # Use system commands for moving to handle all file types
+                    if item.is_dir():
+                        shutil.copytree(item, extraction_path / item.name, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(item, extraction_path / item.name)
+            else:
+                # If there's no single root directory, just move everything
+                for item in root_items:
+                    if item.is_dir():
+                        shutil.copytree(item, extraction_path / item.name, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(item, extraction_path / item.name)
             
         return True
     except Exception as e:

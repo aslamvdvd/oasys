@@ -2,14 +2,14 @@
   "user_activity": {
     "description": "User-related events such as login, logout, registration, profile updates",
     "registered_events": [
-      "login",
-      "logout",
-      "dashboard_visit",
-      "account_deleted",
-      "profile_update",
-      "user_created",
       "login_failed",
-      "test_log"
+      "account_deleted",
+      "logout",
+      "user_created",
+      "test_log",
+      "login",
+      "dashboard_visit",
+      "profile_update"
     ]
   },
   "space_activity": {
@@ -27,40 +27,40 @@
   "templator": {
     "description": "Template management events such as uploads, extractions, and deletions",
     "registered_events": [
-      "template_error",
       "test_log",
+      "template_uploaded",
       "template_deleted",
-      "template_uploaded"
+      "template_error"
     ]
   },
   "admin": {
     "description": "Admin interface activity logging",
     "registered_events": [
-      "admin_login",
-      "admin_other",
-      "object_created",
-      "admin_delete_object",
-      "admin_access",
-      "admin_view_dashboard",
-      "admin_added",
       "admin_view_object_list",
-      "test_log",
-      "object_updated",
-      "admin_deleted",
-      "object_deleted",
+      "admin_edit_object",
       "admin_login_failed",
       "admin_changed",
+      "admin_view_dashboard",
+      "admin_delete_object",
+      "admin_added",
+      "admin_login",
       "admin_add_object",
+      "test_log",
+      "object_created",
+      "admin_access",
       "admin_logout",
-      "admin_edit_object"
+      "object_deleted",
+      "admin_deleted",
+      "admin_other",
+      "object_updated"
     ]
   },
   "templator_activity": {
     "description": "General templator app activity (duplicate of templator for backward compatibility)",
     "registered_events": [
-      "template_error",
+      "template_uploaded",
       "template_deleted",
-      "template_uploaded"
+      "template_error"
     ]
   }
 }
