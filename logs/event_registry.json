@@ -1,12 +1,14 @@
 {
   "user_activity": [
-    "login",
-    "user_created",
-    "description",
     "dashboard_visit",
-    "registered_events",
+    "login",
+    "description",
+    "account_deleted",
+    "login_failed",
+    "profile_update",
     "logout",
-    "profile_update"
+    "user_created",
+    "registered_events"
   ],
   "space_activity": [
     "registered_events",
@@ -25,14 +27,16 @@
     "description"
   ],
   "admin": [
-    "admin_add_object",
-    "admin_login",
-    "admin_logout",
+    "admin_view_dashboard",
     "description",
-    "admin_view_object_list",
+    "admin_login",
+    "admin_edit_object",
     "admin_login_page",
-    "registered_events",
-    "admin_view_dashboard"
+    "admin_view_object_list",
+    "admin_add_object",
+    "admin_other",
+    "admin_logout",
+    "registered_events"
   ],
   "templator_activity": [
     "registered_events",
