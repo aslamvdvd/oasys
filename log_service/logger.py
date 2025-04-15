@@ -7,27 +7,22 @@ from pathlib import Path
 from django.conf import settings
 
 # Import Enum and validation function
-from log_service.events import LogEventType, is_event_valid, register_event
+from log_service.events import LogEventType, register_event # Removed unused is_event_valid
 
 logger = logging.getLogger(__name__) # Standard logger for internal issues
 
 def log_event(log_type: LogEventType, data: dict) -> None:
     """
-    Log an event to the appropriate log file in JSON format using LogEventType Enum.
+    Logs an event to the appropriate log file in JSON format.
+    
+    This is the core logging function. It ensures the event type is valid,
+    registers the specific event name if new, creates necessary directories,
+    and appends the JSON log data to the correct file.
     
     Args:
         log_type: The LogEventType Enum member indicating the log category/file.
-        data: Dictionary containing event details ('event' key is highly recommended).
-    
-    Returns:
-        None
-    
-    The function will:
-    - Validate the log_type against the Enum.
-    - Validate the specific 'event' string if present and register if new.
-    - Auto-create the correct dated folder and log file.
-    - Append structured JSON logs to the correct file.
-    - Log errors to a fallback file if a failure occurs.
+        data: Dictionary containing event details. The 'event' key (str) is
+              highly recommended for specifying the specific action.
     """
     # Validate log_type is a valid Enum member
     if not isinstance(log_type, LogEventType):
@@ -40,7 +35,7 @@ def log_event(log_type: LogEventType, data: dict) -> None:
         event_name = data.get('event')
         # Auto-register the specific event if it's provided and new
         if event_name:
-            # No need to check is_event_valid first, register handles existence check
+            # register_event handles existence check internally
             register_event(log_type, event_name)
             
         # Ensure data has a timestamp if not provided
@@ -58,48 +53,43 @@ def log_event(log_type: LogEventType, data: dict) -> None:
         
         # Append the log entry as JSON
         with open(log_file_path, 'a') as log_file:
-            # Ensure all data is serializable
-            json_string = json.dumps(data, default=str) # Use default=str for non-serializable types
+            json_string = json.dumps(data, default=str) 
             log_file.write(json_string + '\n')
             
     except TypeError as json_err:
         err_msg = f"Failed to serialize log data for {log_type.value}: {json_err}"
         logger.error(err_msg)
-        _log_failure(err_msg, {"original_data_keys": list(data.keys())}) # Log keys only to avoid unserializable data
+        _log_failure(err_msg, {"original_data_keys": list(data.keys())}) 
     except IOError as io_err:
         err_msg = f"Failed to write log file '{log_file_path}': {io_err}"
         logger.error(err_msg)
         _log_failure(err_msg, data)
     except Exception as e:
-        # Catch any other unexpected errors
         err_msg = f"Unexpected error logging {log_type.value} event: {e}"
-        logger.exception(err_msg) # Log full traceback for unexpected errors
+        logger.exception(err_msg) 
         _log_failure(err_msg, data)
 
 def _log_failure(error_message: str, data: dict = None) -> None:
     """
-    Log a failure to the fallback log file.
-    Ensures data logged here is JSON serializable.
+    Internal helper to log a failure to the fallback `failures.log` file.
+    Attempts to safely serialize the original data that caused the failure.
     """
     try:
-        # Ensure the logs directory exists
         log_dir = Path(settings.LOGS_DIR)
         log_dir.mkdir(parents=True, exist_ok=True)
-        
         fallback_log_path = log_dir / 'failures.log'
-        
-        # Ensure data is serializable, fallback to string representation
         serializable_data = None
         if data:
             try:
                 json.dumps(data) # Test serialization
                 serializable_data = data
             except TypeError:
-                 # If original data fails, try converting problematic items to strings
-                serializable_data = json.loads(json.dumps(data, default=str))
+                try:
+                    serializable_data = json.loads(json.dumps(data, default=str))
+                except Exception:
+                    serializable_data = {"unserializable_data_keys": list(data.keys()), "msg": "Original data could not be serialized"}
             except Exception:
-                 # Ultimate fallback: just log keys or a simple message
-                 serializable_data = {"unserializable_data_keys": list(data.keys()), "msg": "Original data could not be serialized"}
+                 serializable_data = {"unserializable_data_keys": list(data.keys()), "msg": "Original data could not be serialized (non-TypeError)"}
                  
         failure_entry = {
             'timestamp': datetime.now().isoformat(),
@@ -108,10 +98,9 @@ def _log_failure(error_message: str, data: dict = None) -> None:
         }
         
         with open(fallback_log_path, 'a') as fallback_file:
-            fallback_file.write(json.dumps(failure_entry) + '\n')
+            fallback_file.write(json.dumps(failure_entry, default=str) + '\n') # Add default=str here too
             
     except Exception as e:
-        # Last resort: use Python's standard logging
         logging.critical(f"CRITICAL FAILURE IN LOGGING SYSTEM: {e}", exc_info=True)
         logging.critical(f"Original Error: {error_message}")
         if data:

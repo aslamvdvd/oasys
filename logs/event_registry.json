@@ -1,45 +1,22 @@
 {
   "user_activity": [
-    "dashboard_visit",
-    "login",
-    "description",
-    "account_deleted",
-    "login_failed",
     "profile_update",
     "logout",
-    "user_created",
-    "registered_events"
+    "login",
+    "account_deleted",
+    "dashboard_visit",
+    "user_created"
   ],
-  "space_activity": [
-    "registered_events",
-    "description"
-  ],
-  "social_media": [
-    "registered_events",
-    "description"
-  ],
-  "engine": [
-    "registered_events",
-    "description"
-  ],
-  "templator": [
-    "registered_events",
-    "description"
-  ],
+  "space_activity": [],
+  "social_media": [],
+  "engine": [],
+  "templator": [],
   "admin": [
     "admin_view_dashboard",
-    "description",
-    "admin_login",
-    "admin_edit_object",
-    "admin_login_page",
-    "admin_view_object_list",
-    "admin_add_object",
-    "admin_other",
     "admin_logout",
-    "registered_events"
+    "admin_login",
+    "admin_view_object_list",
+    "admin_add_object"
   ],
-  "templator_activity": [
-    "registered_events",
-    "description"
-  ]
+  "templator_activity": []
 }

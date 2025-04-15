@@ -1,5 +1,7 @@
 """
 Event types management using Enums for better structure and type safety.
+Defines LogEventType Enum and specific event constants.
+Also manages the event registry persistence.
 
 This module defines and manages event types used throughout the OASYS platform.
 It provides functionality to:
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @unique
 class LogEventType(Enum):
-    """Categorizes log events (corresponds to log file names)."""
+    """Categorizes log events (corresponds to log file names/types)."""
     USER_ACTIVITY = 'user_activity'
     SPACE_ACTIVITY = 'space_activity'
     SOCIAL_MEDIA = 'social_media'
@@ -32,7 +34,7 @@ class LogEventType(Enum):
 
     @classmethod
     def get_description(cls, event_type) -> str:
-        """Returns a description for the event type."""
+        """Returns a human-readable description for the event type."""
         descriptions = {
             cls.USER_ACTIVITY: 'User-related events (login, logout, profile, etc.)',
             cls.SPACE_ACTIVITY: 'Space-related events (creation, updates, deletion, sharing)',
@@ -87,21 +89,19 @@ _event_registry: Dict[LogEventType, Set[str]] = {e_type: set() for e_type in Log
 _registry_loaded = False
 
 def get_registry_file_path() -> Path:
-    """Get the path to the event registry JSON file."""
+    """Get the platform-specific path to the event registry JSON file."""
     return Path(settings.LOGS_DIR) / 'event_registry.json'
 
 def _load_event_registry() -> None:
-    """Loads known events from the registry file into the in-memory store."""
+    """Loads known events from the registry file into the in-memory store (_event_registry)."""
     global _registry_loaded
     if _registry_loaded:
         return
-
     registry_path = get_registry_file_path()
     if registry_path.exists():
         try:
             with open(registry_path, 'r') as f:
                 registry_data = json.load(f)
-            
             for type_str, events_list in registry_data.items():
                 try:
                     event_type_enum = LogEventType(type_str)
@@ -113,11 +113,10 @@ def _load_event_registry() -> None:
     _registry_loaded = True
 
 def _save_event_registry() -> None:
-    """Saves the current in-memory event registry to the JSON file."""
+    """Saves the current in-memory event registry (_event_registry) to its JSON file."""
     registry_path = get_registry_file_path()
     try:
         registry_path.parent.mkdir(parents=True, exist_ok=True)
-        # Convert Enum keys to strings and sets to lists for JSON
         serializable_registry = {e_type.value: list(events) 
                                  for e_type, events in _event_registry.items()}
         with open(registry_path, 'w') as f:
@@ -127,34 +126,25 @@ def _save_event_registry() -> None:
 
 def register_event(event_type: LogEventType, event_name: str) -> None:
     """
-    Registers a specific event under an event type Enum.
-    Ensures the registry is loaded and saves changes.
-    
-    Args:
-        event_type: The LogEventType Enum member.
-        event_name: The specific event name string.
+    Registers a specific event name string under a LogEventType Enum.
+    Ensures the registry is loaded and saves changes if the event is new.
     """
     if not isinstance(event_type, LogEventType):
         raise TypeError("event_type must be a LogEventType Enum member")
-        
     _load_event_registry() # Ensure registry is loaded before modifying
-    
     if event_name not in _event_registry.get(event_type, set()):
         _event_registry.setdefault(event_type, set()).add(event_name)
         _save_event_registry()
 
 def is_event_valid(event_type: LogEventType, event_name: str) -> bool:
     """
-    Checks if a specific event name is registered under the given event type.
-    Useful for validation before logging.
+    Checks if a specific event name string is registered under the given LogEventType.
     """
     _load_event_registry()
     return event_name in _event_registry.get(event_type, set())
 
 def get_registered_events(event_type: LogEventType) -> Set[str]:
-    """
-    Gets all registered event names for a specific LogEventType.
-    """
+    """Gets all registered event names for a specific LogEventType."""
     _load_event_registry()
     return _event_registry.get(event_type, set()).copy() # Return a copy
 
@@ -171,20 +161,15 @@ def register_event_type(event_type_str: str, description: str = None) -> None:
         event_type = LogEventType(event_type_str)
         if event_type not in _event_registry:
              _event_registry[event_type] = set()
-             # No save needed here usually, as it's for ensuring presence during load/validation
     except ValueError:
         logger.error(f"Attempted to register invalid event type string: {event_type_str}")
 
 def get_valid_log_types() -> List[str]:
-    """
-    Get a list of all valid log type *string values* from the Enum.
-    """
+    """Get a list of all valid log type *string values* from the Enum."""
     return [e_type.value for e_type in LogEventType]
 
 def get_event_type_description(event_type_enum: LogEventType) -> Optional[str]:
-    """
-    Get the description for a LogEventType Enum member.
-    """
+    """Get the description for a LogEventType Enum member."""
     if isinstance(event_type_enum, LogEventType):
         return LogEventType.get_description(event_type_enum)
     logger.warning(f"Invalid type provided to get_event_type_description: {type(event_type_enum)}")
@@ -193,7 +178,7 @@ def get_event_type_description(event_type_enum: LogEventType) -> Optional[str]:
 def get_all_events() -> Dict[str, Dict]:
     """
     Get all event types (as strings) and their registered events.
-    Mainly for inspection or external use.
+    Mainly for inspection or external use (e.g., management command).
     """
     _load_event_registry()
     return {e_type.value: {

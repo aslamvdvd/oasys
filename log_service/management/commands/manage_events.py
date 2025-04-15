@@ -1,89 +1,102 @@
 import json
 from django.core.management.base import BaseCommand, CommandError
+
+# Use Enum and helpers
 from log_service.events import (
-    get_all_events, 
-    register_event_type, 
-    register_event,
+    LogEventType,
+    get_all_events,
+    register_event, # Use the unified register_event
     get_registry_file_path
 )
 
 class Command(BaseCommand):
     """
-    Management command to list and manage event types and events.
+    Management command to list and manage event types and registered events.
+    Uses LogEventType Enum for adding events.
     """
-    help = "List, add, and manage event types and events in the logging system"
+    help = "List, add, and manage event types and registered events in the logging system."
 
     def add_arguments(self, parser):
-        subparsers = parser.add_subparsers(dest='command', help='Command to run')
+        subparsers = parser.add_subparsers(dest='command', help='Sub-command to run', required=True)
         
         # List command
-        list_parser = subparsers.add_parser('list', help='List all event types and events')
+        list_parser = subparsers.add_parser('list', help='List all or specific event types and their registered events')
         list_parser.add_argument(
-            '--event-type', 
-            help='Filter events by event type',
-            required=False
+            '--type', 
+            choices=[e.value for e in LogEventType], # Use Enum values for choices
+            help='Filter events by a specific event type (e.g., user_activity)',
+            required=False,
+            dest='event_type_filter' # Store in options under this name
         )
         
-        # Add event type command
-        add_type_parser = subparsers.add_parser('add-type', help='Add a new event type')
-        add_type_parser.add_argument('event_type', help='Name of the event type to add')
-        add_type_parser.add_argument('description', help='Description of the event type')
-        
-        # Add event command
-        add_event_parser = subparsers.add_parser('add-event', help='Add a new event to an event type')
-        add_event_parser.add_argument('event_type', help='Event type to add the event to')
-        add_event_parser.add_argument('event_name', help='Name of the event to add')
+        # Add event command (Removing add-type as types are defined by Enum now)
+        add_event_parser = subparsers.add_parser('register-event', help='Register a specific event name under an existing event type')
+        add_event_parser.add_argument(
+            'event_type', 
+            choices=[e.value for e in LogEventType],
+            help='The event type category (e.g., user_activity)'
+        )
+        add_event_parser.add_argument('event_name', help='The specific event name string to register (e.g., \'password_reset_request\')')
 
     def handle(self, *args, **options):
         command = options.get('command')
         
         if command == 'list':
-            self._list_events(options.get('event_type'))
-        elif command == 'add-type':
-            self._add_event_type(options.get('event_type'), options.get('description'))
-        elif command == 'add-event':
-            self._add_event(options.get('event_type'), options.get('event_name'))
-        else:
-            self.stdout.write(self.style.WARNING("Please specify a command: list, add-type, or add-event"))
-            self.print_help('manage.py', 'manage_events')
+            self._list_events(options.get('event_type_filter'))
+        elif command == 'register-event':
+            self._register_event_cmd(options.get('event_type'), options.get('event_name'))
     
-    def _list_events(self, event_type_filter=None):
-        """List all event types and their registered events."""
-        events = get_all_events()
-        
+    def _list_events(self, event_type_filter_str=None):
+        """Lists event types and registered events, potentially filtered."""
+        try:
+            all_event_data = get_all_events() # Already uses Enums internally
+        except Exception as e:
+            raise CommandError(f"Failed to load event registry: {e}")
+            
         registry_path = get_registry_file_path()
         self.stdout.write(f"Event registry stored at: {registry_path}")
         self.stdout.write("=" * 80)
         
-        if event_type_filter:
-            if event_type_filter not in events:
-                self.stdout.write(self.style.ERROR(f"Event type '{event_type_filter}' not found."))
+        events_to_list = all_event_data
+        if event_type_filter_str:
+            if event_type_filter_str not in all_event_data:
+                self.stdout.write(self.style.ERROR(f"Event type '{event_type_filter_str}' not found in registry."))
+                valid_types = ", ".join(all_event_data.keys())
+                self.stdout.write(f"Valid types are: {valid_types}")
                 return
-            events = {event_type_filter: events[event_type_filter]}
+            events_to_list = {event_type_filter_str: all_event_data[event_type_filter_str]}
         
-        for event_type, data in events.items():
-            self.stdout.write(self.style.SUCCESS(f"Event Type: {event_type}"))
-            self.stdout.write(f"Description: {data['description']}")
-            self.stdout.write("Registered Events:")
-            
-            if data['registered_events']:
-                for event in sorted(data['registered_events']):
-                    self.stdout.write(f"  - {event}")
+        if not events_to_list:
+             self.stdout.write(self.style.WARNING("No event types found or registry is empty."))
+             return
+             
+        for event_type_str, data in sorted(events_to_list.items()):
+            self.stdout.write(self.style.SUCCESS(f"Event Type: {event_type_str}"))
+            self.stdout.write(f"  Description: {data.get('description', 'N/A')}")
+            registered = sorted(data.get('registered_events', []))
+            self.stdout.write(f"  Registered Events ({len(registered)}):")
+            if registered:
+                for event in registered:
+                    self.stdout.write(f"    - {event}")
             else:
-                self.stdout.write("  No events registered yet")
-            
-            self.stdout.write("-" * 80)
+                self.stdout.write(f"    (No specific events registered for this type yet)")
+            self.stdout.write("---") # Separator
     
-    def _add_event_type(self, event_type, description):
-        """Add a new event type."""
-        register_event_type(event_type, description)
-        self.stdout.write(self.style.SUCCESS(
-            f"Successfully added event type '{event_type}' with description: {description}"
-        ))
+    # Removed _add_event_type method
     
-    def _add_event(self, event_type, event_name):
-        """Add a new event to an event type."""
-        register_event(event_type, event_name)
-        self.stdout.write(self.style.SUCCESS(
-            f"Successfully added event '{event_name}' to event type '{event_type}'"
-        )) 
+    def _register_event_cmd(self, event_type_str, event_name):
+        """Handles the register-event sub-command."""
+        if not event_name:
+             raise CommandError("Event name cannot be empty.")
+             
+        try:
+            event_type_enum = LogEventType(event_type_str)
+            register_event(event_type_enum, event_name) # Use the unified function
+            self.stdout.write(self.style.SUCCESS(
+                f"Successfully registered event '{event_name}' under type '{event_type_str}'."
+            ))
+        except ValueError:
+             # Should not happen due to choices in add_arguments, but good practice
+             raise CommandError(f"Invalid event type specified: {event_type_str}")
+        except Exception as e:
+             raise CommandError(f"Failed to register event: {e}") 
