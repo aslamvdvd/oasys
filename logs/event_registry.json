@@ -1,66 +1,40 @@
 {
-  "user_activity": {
-    "description": "User-related events such as login, logout, registration, profile updates",
-    "registered_events": [
-      "login_failed",
-      "account_deleted",
-      "logout",
-      "user_created",
-      "test_log",
-      "login",
-      "dashboard_visit",
-      "profile_update"
-    ]
-  },
-  "space_activity": {
-    "description": "Space-related events such as creation, updates, deletion, sharing",
-    "registered_events": []
-  },
-  "social_media": {
-    "description": "Social media integration-related events like sharing, posting, connections",
-    "registered_events": []
-  },
-  "engine": {
-    "description": "Backend processing and computational events",
-    "registered_events": []
-  },
-  "templator": {
-    "description": "Template management events such as uploads, extractions, and deletions",
-    "registered_events": [
-      "test_log",
-      "template_uploaded",
-      "template_deleted",
-      "template_error"
-    ]
-  },
-  "admin": {
-    "description": "Admin interface activity logging",
-    "registered_events": [
-      "admin_view_object_list",
-      "admin_edit_object",
-      "admin_login_failed",
-      "admin_changed",
-      "admin_view_dashboard",
-      "admin_delete_object",
-      "admin_added",
-      "admin_login",
-      "admin_add_object",
-      "test_log",
-      "object_created",
-      "admin_access",
-      "admin_logout",
-      "object_deleted",
-      "admin_deleted",
-      "admin_other",
-      "object_updated"
-    ]
-  },
-  "templator_activity": {
-    "description": "General templator app activity (duplicate of templator for backward compatibility)",
-    "registered_events": [
-      "template_uploaded",
-      "template_deleted",
-      "template_error"
-    ]
-  }
+  "user_activity": [
+    "registered_events",
+    "description",
+    "user_created",
+    "logout",
+    "login",
+    "profile_update",
+    "dashboard_visit"
+  ],
+  "space_activity": [
+    "description",
+    "registered_events"
+  ],
+  "social_media": [
+    "description",
+    "registered_events"
+  ],
+  "engine": [
+    "description",
+    "registered_events"
+  ],
+  "templator": [
+    "description",
+    "registered_events"
+  ],
+  "admin": [
+    "registered_events",
+    "description",
+    "admin_view_object_list",
+    "admin_logout",
+    "admin_view_dashboard",
+    "admin_add_object",
+    "admin_login"
+  ],
+  "templator_activity": [
+    "description",
+    "registered_events"
+  ]
 }
