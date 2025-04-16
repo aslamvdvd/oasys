@@ -20,6 +20,8 @@ from typing import Any, Dict, Optional
 from django.conf import settings
 from django.http import HttpRequest
 
+# Import HAS_LOG_SERVICE
+from .utils import HAS_LOG_SERVICE
 from .events import LogEventType, register_event, LogSeverity # Import LogSeverity
 
 # Standard Python logger for internal errors WITHIN the logging service
@@ -68,13 +70,16 @@ def log_event(
 
         # 3. Determine Log File Path
         log_file_path = _get_log_file_path(log_entry['timestamp'], event_type)
+        # Define today_dir based on the file path
+        today_dir = log_file_path.parent
 
         # 4. Ensure Directory Exists
         try:
             today_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             logger.error(f"Failed to create log directory {today_dir}: {e}", exc_info=True)
-            _log_failure(log_entry, f"Directory creation failed: {e}")
+            # Pass arguments matching _log_failure definition
+            _log_failure(event_type, event_name, e, locals())
             return # Cannot proceed if directory fails
 
         # 5. Write to Log File with error handling
@@ -85,21 +90,21 @@ def log_event(
                 f.write(log_line + '\n')
         except (IOError, OSError) as e:
             logger.error(f"Failed to write to log file {log_file_path}: {e}", exc_info=True)
-            _log_failure(log_entry, f"File write failed: {e}") # Log the original data + error
+            # Pass arguments matching _log_failure definition
+            _log_failure(event_type, event_name, e, locals()) # Log the original data + error
         except TypeError as e: # Handle JSON serialization errors
             logger.error(f"JSON serialization error for log event: {e}. Attempting to log minimal info.", exc_info=True)
-            # Try to log minimal failure info if serialization failed
-            minimal_failure_data = {
-                 "timestamp": log_entry.get("timestamp"), # Use original timestamp if possible
-                 "event_type": log_entry.get("event_type"),
-                 "event_name": log_entry.get("event_name"),
-                 "error": f"JSON Serialization Failed: {e}"
-            }
-            _log_failure(minimal_failure_data, f"JSON serialization failed: {e}")
+            # Pass arguments matching _log_failure definition
+            _log_failure(event_type, event_name, e, locals())
 
     except Exception as e:
         # Catch-all for unexpected errors during log preparation
         logger.critical(f"Unexpected critical error during log_event processing: {e}", exc_info=True)
+        try:
+            # Attempt to log the failure itself
+            _log_failure(event_type, event_name, e, locals())
+        except Exception as log_fail_e:
+            logger.critical(f"Failed to write to failures.log: {log_fail_e}", exc_info=True)
 
 # --- Helper Functions ---
 
