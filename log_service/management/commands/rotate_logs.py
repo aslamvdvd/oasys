@@ -85,9 +85,17 @@ class Command(BaseCommand):
                 except Exception as e:
                     self.stderr.write(self.style.ERROR(f"Error processing directory {item.name}: {e}"))
                     error_count += 1
-            elif item.name not in ['failures.log', 'event_registry.json'] and not item.is_dir():
-                 # Log other unexpected files/items found in the root logs dir
-                 logger.warning(f"Found unexpected item in logs directory: {item.name}")
+            # Explicitly skip the parser_state directory and known files
+            elif item.name in ['parser_state', 'failures.log', 'event_registry.json']:
+                 logger.debug(f"Skipping known item: {item.name}")
+                 skipped_count += 1 # Optionally count these as skipped
+                 continue
+            # Log other unexpected files/items found
+            elif not item.is_dir():
+                 logger.warning(f"Found unexpected file in logs directory: {item.name}")
+                 skipped_count += 1
+            else: # Log other unexpected directories
+                 logger.warning(f"Found unexpected directory in logs directory: {item.name}")
                  skipped_count += 1
                  
         # Final summary

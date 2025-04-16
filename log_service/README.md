@@ -1,173 +1,117 @@
-# Log Service for OASYS
+# Log Service Application
 
-A modular, structured logging system for the OASYS platform.
+This Django application (`log_service`) provides a centralized and structured logging system for the OASYS platform.
 
 ## Purpose
 
-This Django app provides structured JSON logging for internal system events across the OASYS platform. It is designed to keep internal logs (not accessible to users) and log important system-level activities.
+The primary goal is to capture various events from different parts of the system (application activity, web server access/errors, system logs, database performance, firewall activity) and store them in a consistent, queryable JSON format.
 
 ## Features
 
-- **Directory-based logging**: Logs are organized by date (YYYY-MM-DD folders)
-- **JSON formatted logs**: All logs are stored as JSON strings for structured logging
-- **Multiple log types**: Supports various log types (user_activity, space_activity, social_media, engine)
-- **Dynamic event registration**: Automatically registers new event types and events
-- **Error handling**: Fallback logging mechanism for errors during the logging process
-- **Log rotation**: Management command to delete old logs
-- **Event management**: Tools for listing, adding, and managing event types and events
+- **Structured JSON Logging:** All log events are written as individual JSON objects, making them easy to parse and analyze by external tools (e.g., Filebeat, Logstash, Splunk, custom scripts).
+- **Categorized Log Types:** Logs are categorized using `LogEventType` (defined in `events.py`), which determines the subdirectory and filename where logs are stored.
+- **Daily Log Directories:** Logs are automatically organized into daily directories (`YYYY-MM-DD`).
+- **Centralized Logger Function:** The `log_service.logger.log_event` function is the primary interface for logging events from anywhere in the Django application.
+- **Event Registry:** An `event_registry.json` file (stored within `LOGS_DIR`) keeps track of all unique event names discovered for each log type, aiding in understanding the logged data.
+- **External Log Parsers:** Includes management commands to parse common external log files (Nginx, Syslog, Auth, UFW, PostgreSQL) and ingest them into the structured logging system.
+- **State Management for Parsers:** Parsers maintain state (file inode and offset) to handle log rotation and avoid reprocessing already parsed log entries.
+
+## Structure
+
+- `events.py`: Defines `LogEventType` and `LogSeverity` Enums, specific event name constants (e.g., `EVENT_LOGIN`), and functions for managing the `event_registry.json`.
+- `logger.py`: Contains the core `log_event` function responsible for formatting and writing log entries to the appropriate JSON file.
+- `utils.py`: Utility functions, including checking if the log service is configured.
+- `middleware.py`: Example middleware demonstrating how to hook into Django request/response cycle or signals (like `user_logged_out`) to log application-level events.
+- `management/commands/`: Contains the log parser commands:
+    - `base_parser.py`: Base class providing common state management logic for parsers.
+    - `parse_nginx_access.py`: Parses Nginx access logs.
+    - `parse_nginx_error.py`: Parses Nginx error logs.
+    - `parse_syslog.py`: Parses standard Syslog files.
+    - `parse_authlog.py`: Parses Linux authentication logs (auth.log/secure).
+    - `parse_ufw.py`: Parses UFW firewall logs.
+    - `parse_postgres.py`: Parses PostgreSQL logs (CSV or stderr format).
+
+## Configuration
+
+1.  **`INSTALLED_APPS`**: Ensure `'log_service'` is included in your `INSTALLED_APPS` in `settings.py`.
+2.  **`LOGS_DIR`**: You **must** define the `LOGS_DIR` setting in your `settings.py`. This is the base directory where all log files, the event registry, and parser state files will be stored.
+    ```python
+    # settings.py
+    import os
+    from pathlib import Path
+
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    LOGS_DIR = os.path.join(BASE_DIR, 'logs') # Example: logs directory in project root
+    ```
+3.  **Log Rotation**: This application organizes logs into daily directories but does **not** include a built-in command for deleting old log files. Log rotation (e.g., deleting files older than 30 days) should be handled by an external system utility like `logrotate` or a custom script targeting the `LOGS_DIR`.
 
 ## Usage
 
-### Basic Logging
+### Logging from Application Code
+
+Import `log_event` and `LogEventType`/`LogSeverity`/event constants:
 
 ```python
-from log_service import log_event
+from log_service.logger import log_event
+from log_service.events import LogEventType, LogSeverity, EVENT_LOGIN
 
-# Log a user login event
-log_event('user_activity', {
-    'event': 'login',
-    'user_id': user.id,
-    'username': user.username,
-    'details': 'Successful login via web interface'
-})
-
-# Log a space creation event
-log_event('space_activity', {
-    'event': 'created',
-    'space_id': space.id,
-    'owner_id': space.owner.id,
-    'space_name': space.name
-})
+# Example in a view
+def user_login_view(request):
+    # ... login logic ...
+    if user_logged_in_successfully:
+        log_event(
+            event_type=LogEventType.USER_ACTIVITY,
+            event_name=EVENT_LOGIN,
+            severity=LogSeverity.INFO,
+            message=f"User '{request.user.username}' logged in successfully.",
+            request=request, # Pass request for context (IP, user agent)
+            user=request.user,
+            extra_data={'login_method': 'password'}
+        )
+    # ... rest of view ...
 ```
 
-### Registering New Event Types
+### Running Log Parsers
 
-```python
-from log_service import register_event_type, register_event
-
-# Register a new event type
-register_event_type('api_calls', 'API-related events such as requests and responses')
-
-# Register a new event under an event type
-register_event('api_calls', 'api_request')
-
-# Now you can log events with this type
-log_event('api_calls', {
-    'event': 'api_request',
-    'endpoint': '/api/v1/users',
-    'method': 'GET',
-    'status_code': 200,
-    'duration_ms': 45
-})
-```
-
-### Log Structure
-
-Logs are saved in this directory structure:
-
-```
-logs/
-├── YYYY-MM-DD/
-│   ├── user_activity.log
-│   ├── space_activity.log
-│   ├── social_media.log
-│   ├── engine.log
-│   ├── templator.log   <-- Template operations
-│   └── admin.log       <-- Admin interface actions
-├── failures.log
-└── event_registry.json
-```
-
-### Event Registry
-
-The system maintains an `event_registry.json` file that stores all registered event types and their events. This ensures that the system "remembers" all event types across restarts.
-
-### Management Commands
-
-#### Rotate Logs
-
-To delete logs older than 30 days:
+Parsers are run as Django management commands. Activate your virtual environment first.
 
 ```bash
-python manage.py rotate_logs 30
+# Example: Parse Nginx access log
+sudo /path/to/venv/bin/python manage.py parse_nginx_access --log-file /var/log/nginx/access.log
+
+# Example: Parse PostgreSQL CSV log
+sudo /path/to/venv/bin/python manage.py parse_postgres --log-file /var/log/postgresql/postgresql-16-main.csv --log-format csv --csv-fields <your_field_list>
+# Note: For PostgreSQL CSV logs, ensure <your_field_list> matches your 'log_line_prefix' in postgresql.conf.
+# Check the DEFAULT_CSV_FIELDS list in the parse_postgres.py command for a common example.
+
+# Example: Parse UFW log
+sudo /path/to/venv/bin/python manage.py parse_ufw --log-file /var/log/ufw.log
 ```
 
-To simulate what would be deleted without actually deleting:
+**Note:** Parsers often require `sudo` if reading system log files with restricted permissions. Always use the full path to the Python executable within your virtual environment when using `sudo`.
 
-```bash
-python manage.py rotate_logs 30 --dry-run
-```
+It is recommended to run these parsers periodically using a scheduler like `cron`.
 
-#### Manage Events
+## Log Format
 
-List all event types and their registered events:
+Log entries are written as single-line JSON objects to files named `<event_type.value>.log` within daily directories (`<LOGS_DIR>/YYYY-MM-DD/`).
 
-```bash
-python manage.py manage_events list
-```
+A typical log entry includes:
 
-List events for a specific event type:
-
-```bash
-python manage.py manage_events list --event-type=user_activity
-```
-
-Add a new event type:
-
-```bash
-python manage.py manage_events add-type api_calls "API-related events such as requests and responses"
-```
-
-Add a new event:
-
-```bash
-python manage.py manage_events add-event api_calls api_request
-```
-
-## Supported Log Types
-
-- `user_activity`: User-related events (login, logout, profile updates, etc.)
-- `space_activity`: Space-related events (creation, updates, deletion, etc.)
-- `social_media`: Social media integrations and activities
-- `engine`: Backend processing and computational activities
-- *Any new event type*: The system automatically registers new event types when encountered
-
-## Specialized Log Types
-
-In addition to general logging, the log_service provides specialized logging for specific components:
-
-### Admin Logging
-
-The `admin_logger` module provides specialized logging for admin interface actions:
-
-```python
-from log_service import log_admin_addition, log_admin_change, log_admin_deletion
-
-# In your ModelAdmin class:
-def save_model(self, request, obj, form, change):
-    """Override save_model to log admin actions."""
-    super().save_model(request, obj, form, change)
-    
-    if change:
-        log_admin_change(request.user, obj, f"Object {obj} was updated")
-    else:
-        log_admin_addition(request.user, obj, f"Object {obj} was created")
-
-def delete_model(self, request, obj):
-    """Override delete_model to log admin actions."""
-    super().delete_model(request, obj)
-    log_admin_deletion(request.user, obj, f"Object {obj} was deleted")
-```
-
-Admin logs are stored in the `admin.log` file in the date-based directory structure (`logs/YYYY-MM-DD/admin.log`).
-
-### Templator Logging
-
-The templator app has specialized logging in the `templator.log` file in the date-based directory structure.
-
-## Implementation Notes
-
-- Uses environment-configured paths (via settings.LOGS_DIR)
-- No URLs or views are exposed
-- All logs are written as newline-delimited JSON for easy parsing
-- Auto-registration of new event types and events makes the system extensible 
+```json
+{
+  "timestamp": "2023-10-27T12:00:00.123456Z", // UTC timestamp of logging event
+  "event_type": "user_activity", // From LogEventType Enum
+  "event_name": "login", // Specific event constant or identifier
+  "severity": "INFO", // From LogSeverity Enum
+  "source": "view.user_login_view", // Originating module/function (usually auto-detected, can be overridden)
+  "message": "User 'admin' logged in successfully.", // Human-readable message
+  "ip_address": "192.168.1.100", // Extracted from request if available
+  "user_agent": "Mozilla/5.0 ...", // Extracted from request if available
+  "user_id": 1, // Logged-in user ID if available
+  "username": "admin", // Logged-in username if available
+  "extra_data": { // Optional dictionary for additional context
+    "login_method": "password"
+  }
+}
+``` 

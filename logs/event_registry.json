@@ -1,22 +1,32 @@
 {
+  "admin": [
+    "admin_add_object",
+    "admin_login",
+    "admin_logout",
+    "admin_view_dashboard",
+    "admin_view_object_list"
+  ],
+  "application": [],
+  "database": [
+    "db_error"
+  ],
+  "database_slow_query": [],
+  "firewall": [],
+  "server_access": [
+    "nginx_access"
+  ],
+  "server_error": [],
+  "system_auth": [],
+  "system_syslog": [],
+  "templator": [],
+  "templator_activity": [],
   "user_activity": [
-    "profile_update",
-    "logout",
-    "login",
     "account_deleted",
     "dashboard_visit",
+    "login",
+    "logout",
+    "profile_update",
+    "spaces_view",
     "user_created"
-  ],
-  "space_activity": [],
-  "social_media": [],
-  "engine": [],
-  "templator": [],
-  "admin": [
-    "admin_view_dashboard",
-    "admin_logout",
-    "admin_login",
-    "admin_view_object_list",
-    "admin_add_object"
-  ],
-  "templator_activity": []
+  ]
 }

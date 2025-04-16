@@ -1,0 +1,22 @@
+{% extends 'accounts/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Confirm Account Deletion" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{% trans "Confirm Account Deletion" %}</h2>
+    <hr>
+
+    <div class="alert alert-danger" role="alert">
+        <strong>{% trans "Warning:" %}</strong> {% trans "Are you sure you want to delete your account? This action cannot be undone. All your data associated with this account will be permanently removed." %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">{% trans "Yes, Delete My Account" %}</button>
+        <a href="{% url 'accounts:profile_view' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+    </form>
+
+</div>
+{% endblock %} 

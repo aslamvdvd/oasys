@@ -1,9 +1,10 @@
-{% extends 'accounts/base_accounts.html' %}
+{% extends 'core/base.html' %} {# Changed base template #}
 {% load static %}
 
 {% block title %}Sign Up - oasys{% endblock %}
 
 {% block extra_css %}
+{# Kept original static file reference - might need adjustment #}
 <link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
 {% endblock %}
 
@@ -109,6 +110,7 @@
         </form>
         
         <div class="auth-links">
+            {# Update URL name if needed after moving views/templates #}
             <p>Already have an account? <a href="{% url 'accounts:login' %}">Login</a></p>
         </div>
     </div>
@@ -116,5 +118,6 @@
 {% endblock %}
 
 {% block extra_js %}
+{# Kept original static file reference - might need adjustment #}
 <script src="{% static 'accounts/js/signup.js' %}"></script>
 {% endblock %} 

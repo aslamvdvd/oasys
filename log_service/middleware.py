@@ -1,145 +1,207 @@
 """
 Middleware for logging administrative actions.
+Connects signals for login/logout events and logs general admin activity via middleware.
 """
 import logging
+
 from django.contrib.auth import user_logged_out
 from django.contrib.auth.signals import user_login_failed
 from django.dispatch import receiver
+from django.http import HttpRequest, HttpResponse
 
-# Use Enums and Constants
-from .events import (
-    LogEventType,
-    EVENT_ADMIN_LOGIN, EVENT_ADMIN_LOGOUT, EVENT_ADMIN_LOGIN_FAILED
-)
-from .utils import create_log_data, match_admin_path, resolve_event_name, is_loggable_request
+# Import new logger, event types, severity, and helpers
+from .events import LogEventType, LogSeverity
 from .logger import log_event
+from .utils import (
+    log_user_logout, 
+    log_login_failed, 
+    log_user_login, 
+    match_admin_path, 
+    resolve_admin_event_name, 
+    is_loggable_admin_request,
+    log_exception, # <-- Import log_exception
+    HAS_LOG_SERVICE # Check if service is active
+)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # For middleware internal messages
+
+# --- Signal Receivers --- 
 
 @receiver(user_logged_out)
-def handle_admin_logout(sender, request, user, **kwargs):
+def handle_admin_logout(sender, request: HttpRequest, user, **kwargs):
     """
-    Log user logout specifically from the admin interface.
+    Log user logout specifically from the admin interface using the utility function.
     """
-    # Use constant for path check for consistency
+    if not HAS_LOG_SERVICE: return
+    
+    # Check if it's an admin logout path
     if user and request and request.path.startswith('/admin/logout/'):
-        logger.info(f"Admin logout detected for user: {user.username}")
-        log_data = create_log_data(
-            event=EVENT_ADMIN_LOGOUT,
-            user=user.username,
-            action='logout', # Action type string
-            target='admin.session',
-            method=request.method,
-            status=response.status_code if 'response' in kwargs else 200 # Best guess status
-        )
-        log_event(LogEventType.ADMIN, log_data)
+        source = f'{__name__}.handle_admin_logout'
+        logger.debug(f"Signal received for admin logout: user={user.username}, source={source}")
+        # Use the helper from utils
+        log_user_logout(user=user, request=request, source=source)
 
 @receiver(user_login_failed)
-def handle_admin_login_failure(sender, credentials, request, **kwargs):
+def handle_admin_login_failure(sender, credentials, request: HttpRequest, **kwargs):
     """
-    Log failed login attempts to the admin interface via signal.
+    Log failed login attempts to the admin interface using the utility function.
     """
+    if not HAS_LOG_SERVICE: return
+    
     if request and request.path.startswith('/admin/login/'):
         username = credentials.get('username', 'unknown')
-        logger.info(f"Signal detected admin login failure for user: {username}")
-        log_data = create_log_data(
-            event=EVENT_ADMIN_LOGIN_FAILED,
-            user=username,
-            action='login_failed',
-            target='admin.session',
-            method=request.method,
-            status=401 # Unauthorized
+        source = f'{__name__}.handle_admin_login_failure'
+        logger.debug(f"Signal received for admin login failure: user={username}, source={source}")
+        # Use the helper from utils
+        log_login_failed(
+            username_or_email=username, 
+            request=request, 
+            source=source, 
+            reason='Invalid credentials (captured by signal)'
         )
-        log_event(LogEventType.ADMIN, log_data)
+
+# --- Middleware Class --- 
 
 class AdminActivityMiddleware:
     """
-    Middleware to log admin activity using centralized utilities.
+    Middleware to log admin activity using centralized logging functions.
+    Handles successful logins and general admin actions.
+    Relies on signals for logout and failed login events.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
+        logger.info(f"AdminActivityMiddleware initialized. Log Service Available: {HAS_LOG_SERVICE}")
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest):
+        # Execute the request-response cycle first
         response = self.get_response(request)
 
-        # Handle Login POSTs explicitly (Success/Failure)
-        if request.path.startswith('/admin/login/') and request.method == 'POST':
-            self._handle_login_post(request, response)
+        # Skip logging if the service is not configured
+        if not HAS_LOG_SERVICE:
             return response
+            
+        try:
+            # Handle Successful Login POSTs explicitly
+            # Check for specific conditions indicating a successful admin login redirect
+            if (
+                request.path.startswith('/admin/login/') and 
+                request.method == 'POST' and 
+                request.user.is_authenticated and 
+                response.status_code == 302 # Typically redirects after successful login
+            ):
+                source = f'{self.__class__.__name__}.__call__' # Use class name
+                logger.debug(f"Middleware detected successful admin login: user={request.user.username}")
+                log_user_login(user=request.user, request=request, source=source)
+                # No need to log failure here, signal handler covers that.
+                return response # Login handled, proceed no further with logging this request
 
-        # Handle general loggable requests
-        if is_loggable_request(request, response) and request.user.is_authenticated:
-            admin_info = match_admin_path(request.path)
-            if admin_info:
-                self._log_general_admin_activity(request, response, admin_info)
-
+            # Handle general loggable requests (excluding login/logout handled elsewhere)
+            # Use the utility function to check if this request/response combo should be logged
+            if is_loggable_admin_request(request, response) and request.user.is_authenticated:
+                admin_info = match_admin_path(request.path)
+                if admin_info:
+                    self._log_general_admin_action(request, response, admin_info)
+            
+        except Exception as e:
+            # Log any errors occurring within the logging middleware itself
+            logger.error(f"Error in AdminActivityMiddleware: {e}", exc_info=True)
+            # Optionally, use log_exception if it's safe and available
+            # from .utils import log_exception
+            # log_exception(request, e, source=f'{self.__class__.__name__}.__call__')
+            
         return response
 
-    def _handle_login_post(self, request, response):
+    def _log_general_admin_action(self, request: HttpRequest, response: HttpResponse, admin_info: dict):
         """
-        Handles logging for POST requests to the admin login URL.
-        Logs either admin_login_failed or admin_login.
+        Logs general admin activity (views, edits, adds, deletes) using the core log_event.
         """
-        # Failed Login Fallback (Signal handler is primary)
-        if not request.user.is_authenticated:
-            username = request.POST.get('username', 'unknown')
-            logger.info(f"Middleware fallback detected potential admin login failure for user: {username}")
-            log_data = create_log_data(
-                event=EVENT_ADMIN_LOGIN_FAILED,
-                user=username,
-                action='login_failed',
-                target='admin.session',
-                method=request.method,
-                status=401 # Log as 401 regardless of response status
-            )
-            # Avoid double logging if signal already handled it (Requires coordination if needed)
-            # For simplicity, we might allow potential double logs here if signal fires AND this check passes
-            log_event(LogEventType.ADMIN, log_data)
+        action_type = admin_info['action_type'] # Original matched event constant
+        # Determine the final, more specific event name based on method (e.g., add -> created)
+        event_name = resolve_admin_event_name(action_type, request.method)
 
-        # Successful Login
-        elif request.user.is_authenticated and response.status_code == 302:
-            logger.info(f"Middleware detected successful admin login for user: {request.user.username}")
-            log_data = create_log_data(
-                event=EVENT_ADMIN_LOGIN,
-                user=request.user.username,
-                action='login', # Action type string
-                target='admin.session',
-                method=request.method,
-                status=response.status_code
-            )
-            log_event(LogEventType.ADMIN, log_data)
+        # Construct target identifier
+        app_label = admin_info.get('app_label')
+        model_name = admin_info.get('model_name')
+        object_id = admin_info.get('object_id')
 
-    def _log_general_admin_activity(self, request, response, admin_info):
-        """
-        Logs general admin activity (views, edits, adds, deletes) using helpers.
-        """
-        action_type = admin_info['action_type'] # This is now an event constant
-        event_name = resolve_event_name(action_type, request.method) # Gets the final event name
+        if app_label and model_name:
+            target = f"{app_label}.{model_name}"
+            if object_id:
+                target += f":{object_id}"
+        else:
+            # Handle cases like admin dashboard view
+            target = 'admin.dashboard' if action_type == 'admin_view_dashboard' else 'admin.unknown'
+            
+        # Prepare extra data specific to admin actions
+        extra = {
+            'action_type': action_type, # Include the original action type
+            'app_label': app_label,
+            'model_name': model_name,
+            'object_id': object_id,
+            'response_status': response.status_code
+        }
+        # Remove None values from extra data
+        extra_cleaned = {k: v for k, v in extra.items() if v is not None}
 
-        target = f"{admin_info.get('app_label', '')}.{admin_info.get('model_name', '')}"
-        target = target if target != '.' else 'admin' # Clean up target for dashboard/root
+        source = f'{self.__class__.__name__}._log_general_admin_action'
+        message = f"Admin action: {event_name} on target: {target}"
+        
+        logger.debug(f"Logging general admin action: event={event_name}, target={target}, user={request.user.username}")
 
-        log_data = create_log_data(
-            event=event_name,
-            user=request.user.username,
-            action=action_type, # Log the constant representing the action group
+        # Call the core log_event function directly
+        log_event(
+            event_type=LogEventType.ADMIN,
+            event_name=event_name,
+            severity=LogSeverity.INFO, # Most admin actions are informational
+            user=request.user,
+            request=request,
+            source=source,
+            message=message,
             target=target,
-            object_id=admin_info.get('object_id', ''),
-            method=request.method,
-            status=response.status_code
+            extra_data=extra_cleaned
         )
-        log_event(LogEventType.ADMIN, log_data)
 
+# --- Exception Logging Middleware --- 
 
-# ----- Signal Connections (Kept in middleware.py for clarity) -----
+class ExceptionLoggingMiddleware:
+    """
+    Catches unhandled exceptions during request processing and logs them.
+    Must be placed appropriately in settings.MIDDLEWARE.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        logger.info(f"ExceptionLoggingMiddleware initialized. Log Service Available: {HAS_LOG_SERVICE}")
 
-# Ensure signals are connected. Using the @receiver decorator handles this,
-# but explicit connection doesn't hurt and can be clearer for some.
-# user_logged_out.connect(log_user_logout)
-# user_login_failed.connect(handle_admin_login_failure)
-# Note: Explicitly connecting signals decorated with @receiver can lead to duplicate signal handling.
-# It's generally recommended to use one method or the other. @receiver is preferred.
+    def __call__(self, request: HttpRequest):
+        try:
+            # Process the request normally
+            response = self.get_response(request)
+            return response
+        except Exception as e:
+            # Log the exception if the service is available
+            if HAS_LOG_SERVICE:
+                source = f'{self.__class__.__name__}.__call__'
+                try:
+                    logger.debug(f"Logging exception from middleware: {type(e).__name__}")
+                    # Call the log_exception helper from utils
+                    log_exception(request=request, exc=e, source=source)
+                except Exception as log_e:
+                    # Avoid crashing if logging itself fails
+                    logger.critical(
+                        f"CRITICAL: Failed to log exception using log_exception in middleware! "
+                        f"Original error: {e}. Logging error: {log_e}",
+                        exc_info=True
+                    )
+            else:
+                # If log service unavailable, log to standard logger
+                logger.error(
+                    f"Unhandled exception occurred, but log service is unavailable: {e}", 
+                    exc_info=True
+                )
+            
+            # IMPORTANT: Re-raise the exception so Django's default error handling 
+            # (or other middleware) still processes it to show an error page.
+            raise
 
-# Clean up old functions that are now replaced by utils or refactored logic
-# (Remove _should_log, _get_event_name, _get_admin_info from the class if they existed)
+# Note: Signal connections are handled by @receiver decorators.

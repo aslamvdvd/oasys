@@ -98,4 +98,58 @@ class LoginForm(AuthenticationForm):
             else:
                 self.confirm_login_allowed(self.user_cache)
 
-        return self.cleaned_data 
+        return self.cleaned_data
+
+# --- Profile Update Form --- 
+
+class ProfileUpdateForm(forms.ModelForm):
+    """
+    Form for users to update their profile information.
+    Excludes username and password fields, focuses on personal details.
+    """
+    email = forms.EmailField(
+        label=_("Email"),
+        max_length=254,
+        widget=forms.EmailInput(attrs={'autocomplete': 'email', 'class': 'form-control'}),
+        help_text=_("Enter a valid email address."),
+    )
+    first_name = forms.CharField(
+        label=_("First Name"),
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    middle_name = forms.CharField(
+        label=_("Middle Name"),
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        help_text=_("Optional."),
+    )
+    last_name = forms.CharField(
+        label=_("Last Name"),
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    bio = forms.CharField(
+        label=_("Bio"),
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+        help_text=_("Optional. Tell us a little about yourself.")
+    )
+
+    class Meta:
+        model = User
+        # Fields that the user can edit on their profile
+        fields = ['email', 'first_name', 'middle_name', 'last_name', 'bio']
+
+    def clean_email(self):
+        """
+        Ensure the new email doesn't conflict with another user's email.
+        """
+        email = self.cleaned_data.get('email')
+        # Check if the email exists and belongs to a *different* user
+        if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError(_("This email address is already in use by another account."))
+        return email 

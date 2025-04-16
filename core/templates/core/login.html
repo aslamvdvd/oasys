@@ -1,9 +1,10 @@
-{% extends 'accounts/base_accounts.html' %}
+{% extends 'core/base.html' %} {# Changed base template #}
 {% load static %}
 
 {% block title %}Login - oasys{% endblock %}
 
 {% block extra_css %}
+{# Kept original static file reference - might need adjustment #}
 <link rel="stylesheet" href="{% static 'accounts/css/login.css' %}">
 {% endblock %}
 
@@ -50,13 +51,16 @@
         </form>
         
         <div class="auth-links">
-            <p>Don't have an account? <a href="{% url 'accounts:signup' %}">Sign Up</a></p>
-            <p><a href="#" class="forgot-password-link">Forgot Password?</a></p>
+            {# Update URL name if needed after moving views/templates #}
+            <p>Don't have an account? <a href="{% url 'accounts:signup' %}">Sign Up</a></p> 
+            {# Update password reset URL #}
+            <p><a href="{% url 'accounts:password_reset' %}" class="forgot-password-link">Forgot Password?</a></p>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{# Kept original static file reference - might need adjustment #}
 <script src="{% static 'accounts/js/login.js' %}"></script>
 {% endblock %} 
