@@ -1,5 +1,6 @@
 import logging
 from django.shortcuts import render
+from django.conf import settings # Import settings
 
 # Import log helper if available
 try:
@@ -20,6 +21,7 @@ def welcome(request):
     
     Logs a visit event if the user is authenticated and log service is available.
     """
+    
     context = {}
     
     # Log visit only if user is logged in (anonymous visits might be too noisy)

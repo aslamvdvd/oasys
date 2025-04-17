@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup messages auto-dismissal
     setupMessages();
     
-    // Setup navigation active state
-    setActiveNavLink();
+    // Setup navigation active state - REMOVED as handled server-side
+    // setActiveNavLink(); 
 });
 
 // Function to handle messages display and dismissal
@@ -45,7 +45,8 @@ function fadeOutMessage(message) {
     }, 500);
 }
 
-// Function to set active class on the correct navigation link
+// Function to set active class on the correct navigation link - REMOVED
+/*
 function setActiveNavLink() {
     const navLinks = document.querySelectorAll('.nav-link');
     const currentPath = window.location.pathname;
@@ -63,3 +64,4 @@ function setActiveNavLink() {
         }
     });
 }
+*/

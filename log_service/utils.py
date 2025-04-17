@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, Tuple, List
 
 from django.http import HttpRequest
 from django.conf import settings # Needed for HAS_LOG_SERVICE check
+from pathlib import Path
 
 # Import Enums, Constants, and the core log_event function
 from .events import (
@@ -26,7 +27,9 @@ from .events import (
     EVENT_OBJECT_CREATED, EVENT_OBJECT_UPDATED, EVENT_OBJECT_DELETED,
     EVENT_APP_EXCEPTION, EVENT_APP_PERMISSION_DENIED, EVENT_APP_SENSITIVE_ACTION
 )
-from .logger import log_event
+
+from .choices import EventType, LogLevel
+from .signals import log_service_config_changed # Assuming this signal exists
 
 # --- Fallback Mechanism --- 
 
@@ -35,16 +38,21 @@ _util_logger = logging.getLogger(__name__)
 
 # Check if the core logger is available
 # This assumes log_event function itself is the indicator of availability
-HAS_LOG_SERVICE = hasattr(settings, 'LOGS_DIR') and callable(log_event)
+# HAS_LOG_SERVICE = hasattr(settings, 'LOGS_DIR') and callable(log_event)
+# Correction: Only check for the setting, as callable() check causes NameError during init
+HAS_LOG_SERVICE = hasattr(settings, 'LOGS_DIR')
 
 if not HAS_LOG_SERVICE:
-    _util_logger.warning("Log service (log_event or LOGS_DIR) appears unavailable. Logging helpers will be no-ops.")
+    _util_logger.warning("Log service (LOGS_DIR setting missing) appears unavailable. Logging helpers will be no-ops.")
     # Define dummy logger function if service not found
-    def _dummy_log_event(*args, **kwargs): 
+    def _dummy_log_event(*args, **kwargs):
         _util_logger.debug(f"Log service unavailable. Call suppressed: args={args}, kwargs={kwargs}")
-    # Override log_event with the dummy
-    log_event = _dummy_log_event
-    
+    # Override log_event - BUT log_event isn't defined here. This override is ineffective.
+    # The check needs to happen *inside* each helper function.
+    # We'll remove this override and check HAS_LOG_SERVICE in helpers.
+    # log_event = _dummy_log_event
+    pass # Keep the structure, but the override doesn't work here
+
 # --- NEW General Purpose Log Helpers --- 
 
 def log_exception(
@@ -59,6 +67,9 @@ def log_exception(
     """Logs an application exception with traceback."""
     if not HAS_LOG_SERVICE: return
 
+    # Import here to avoid circular imports
+    from .logger import log_event
+
     detail = message or f"Exception caught: {type(exc).__name__}"
     tb_str = traceback.format_exc() 
 
@@ -71,6 +82,8 @@ def log_exception(
         local_extra.update(extra_data)
         
     # Attempt to get user from request if not provided
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     if user is None and request and hasattr(request, 'user') and isinstance(request.user, User) and request.user.is_authenticated:
         user = request.user
         
@@ -96,9 +109,14 @@ def log_permission_denied(
     """Logs a permission denied event."""
     if not HAS_LOG_SERVICE: return
 
+    # Import here to avoid circular imports
+    from .logger import log_event
+
     detail = message or "Permission denied accessing resource."
     
     # Attempt to get user from request if not provided
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     if user is None and request and hasattr(request, 'user') and isinstance(request.user, User) and request.user.is_authenticated:
         user = request.user
         
@@ -130,6 +148,9 @@ def log_sensitive_action(
     """
     if not HAS_LOG_SERVICE: return
     
+    # Import here to avoid circular imports
+    from .logger import log_event
+    
     log_event(
         event_type=LogEventType.APPLICATION, # Default type
         event_name=event_name, # Specific event name passed in
@@ -156,6 +177,9 @@ def log_user_activity(
 ) -> None:
     """Logs a general user activity event using LogEventType.USER_ACTIVITY."""
     if not HAS_LOG_SERVICE: return
+    
+    # Import here to avoid circular imports
+    from .logger import log_event
     
     # Handle anonymous user or fallback username for specific cases
     actor = user

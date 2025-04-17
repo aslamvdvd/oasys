@@ -20,9 +20,9 @@ from typing import Any, Dict, Optional
 from django.conf import settings
 from django.http import HttpRequest
 
-# Import HAS_LOG_SERVICE
-from .utils import HAS_LOG_SERVICE
-from .events import LogEventType, register_event, LogSeverity # Import LogSeverity
+# Import enums directly - no models import here
+from .choices import EventType, LogLevel
+from .events import LogEventType, LogSeverity
 
 # Standard Python logger for internal errors WITHIN the logging service
 logger = logging.getLogger(__name__)
@@ -30,81 +30,67 @@ logger = logging.getLogger(__name__)
 # --- Core Log Writing Function ---
 
 def log_event(
-    event_type: LogEventType,
-    event_name: str,
-    user: Optional[Any] = None, # Keep type hint general or use settings.AUTH_USER_MODEL later if needed
-    request: Optional[HttpRequest] = None,
-    severity: LogSeverity = LogSeverity.INFO,
-    source: Optional[str] = None,
-    message: Optional[str] = None,
-    target: Optional[str] = None,
-    extra_data: Optional[Dict[str, Any]] = None
+    event_type: EventType,
+    level: LogLevel = LogLevel.INFO,
+    user: settings.AUTH_USER_MODEL = None,
+    source: str = None,
+    details: str = None,
+    request: HttpRequest = None,
+    related_object=None,
+    # Added new standard fields from LogEvent structure
+    event_name: str = None, # Specific event name (e.g., 'user_login')
+    severity: LogSeverity = LogSeverity.INFO, # Standardized severity
+    message: str = None, # Standardized message field (replaces 'details'?)
+    target: str = None, # Optional target identifier
+    extra_data: dict = None # Structured extra data
 ) -> None:
     """
-    Logs a structured event to the appropriate log file based on event_type.
-
-    Args:
-        event_type: The category of the event (e.g., LogEventType.USER_ACTIVITY).
-        event_name: A specific name for the event (e.g., events.EVENT_LOGIN).
-        user: The User object associated with the event, if any.
-        request: The Django HttpRequest object, if available, to extract IP, method, etc.
-        severity: The severity level of the log (LogSeverity Enum).
-        source: The origin of the log event (e.g., 'app.views.profile', 'middleware', 'parser.nginx').
-        message: A human-readable message describing the event.
-        target: The object or resource the action was performed on, if applicable.
-        extra_data: A dictionary of additional context-specific data (must be JSON-serializable).
-                      **IMPORTANT**: Ensure no sensitive data (passwords, raw POST, tokens) is included here.
+    Core function to create a SystemLog entry.
+    Handles potential errors during logging itself.
+    Now includes standardized fields like event_name, severity, message, target.
     """
-    if not HAS_LOG_SERVICE:
-        logger.debug("Log service not configured (LOGS_DIR missing). Skipping log_event.")
-        return
-        
-    try:
-        # 1. Register the event name if not seen before (for discovery/management)
-        register_event(event_type, event_name)
+    # --- Moved Import --- 
+    from django.contrib.contenttypes.models import ContentType
+    from .models import SystemLog  # Import model here to avoid circular imports
+    from .utils import HAS_LOG_SERVICE # <-- Import HAS_LOG_SERVICE here
+    # --- End Moved Import ---
 
-        # 2. Prepare Log Data Structure
-        log_entry = _create_log_entry(
-            event_type, event_name, user, request, severity, source, message, target, extra_data
+    if not HAS_LOG_SERVICE:
+        # Log to standard logger if service is off but function called?
+        # logger.debug("Log service unavailable, log_event call suppressed.")
+        return # Do nothing if the service is disabled
+
+    try:
+        # Prioritize new standardized fields
+        final_details = message if message is not None else details
+        final_source = source or 'Unknown'
+        final_level = severity.name if severity else level.name # Use severity if provided
+        final_event_name = event_name or event_type.name # Use specific name or fallback to type name
+
+        log_entry = SystemLog(
+            event_type=event_type.value, # Keep original enum value for DB
+            log_level=final_level,     # Store severity/level name
+            user=user,
+            source=final_source,
+            details=final_details or '', # Ensure details/message is stored
+            ip_address=_get_client_ip(request) if request else None,
+            user_agent=request.META.get('HTTP_USER_AGENT', '') if request else None,
+            # New fields
+            event_name=final_event_name,
+            target=target,
+            extra_data=extra_data or {},
         )
 
-        # 3. Determine Log File Path
-        log_file_path = _get_log_file_path(log_entry['timestamp'], event_type)
-        # Define today_dir based on the file path
-        today_dir = log_file_path.parent
+        # Handle generic relation for related_object
+        if related_object:
+            log_entry.content_type = ContentType.objects.get_for_model(related_object)
+            log_entry.object_id = related_object.pk
 
-        # 4. Ensure Directory Exists
-        try:
-            today_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.error(f"Failed to create log directory {today_dir}: {e}", exc_info=True)
-            # Pass arguments matching _log_failure definition
-            _log_failure(event_type, event_name, e, locals())
-            return # Cannot proceed if directory fails
-
-        # 5. Write to Log File with error handling
-        try:
-            # Use default=str to handle potential non-serializable types like datetime
-            log_line = json.dumps(log_entry, default=str)
-            with open(log_file_path, 'a', encoding='utf-8') as f:
-                f.write(log_line + '\n')
-        except (IOError, OSError) as e:
-            logger.error(f"Failed to write to log file {log_file_path}: {e}", exc_info=True)
-            # Pass arguments matching _log_failure definition
-            _log_failure(event_type, event_name, e, locals()) # Log the original data + error
-        except TypeError as e: # Handle JSON serialization errors
-            logger.error(f"JSON serialization error for log event: {e}. Attempting to log minimal info.", exc_info=True)
-            # Pass arguments matching _log_failure definition
-            _log_failure(event_type, event_name, e, locals())
+        log_entry.save()
 
     except Exception as e:
-        # Catch-all for unexpected errors during log preparation
-        logger.critical(f"Unexpected critical error during log_event processing: {e}", exc_info=True)
-        try:
-            # Attempt to log the failure itself
-            _log_failure(event_type, event_name, e, locals())
-        except Exception as log_fail_e:
-            logger.critical(f"Failed to write to failures.log: {log_fail_e}", exc_info=True)
+        # Use standard Python logger as a fallback if DB logging fails
+        logger.error(f"Failed to create SystemLog entry: {e}", exc_info=True)
 
 # --- Helper Functions ---
 

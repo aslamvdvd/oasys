@@ -3,101 +3,37 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Signup page JS loaded');
     
-    // Handle form validation
-    setupSignupFormValidation();
+    // Set up password strength indicator listener
+    setupPasswordStrengthListener();
     
     // Add animation to the form
     animateSignupForm();
 });
 
-// Function to set up form validation
-function setupSignupFormValidation() {
+// Function to set up relevant listeners (modified from setupSignupFormValidation)
+function setupPasswordStrengthListener() {
     const signupForm = document.querySelector('.signup-form');
-    
     if (!signupForm) return;
     
-    const emailInput = signupForm.querySelector('input[type="email"]');
     const passwordInput = signupForm.querySelector('input[name="password1"]');
-    const passwordConfirmInput = signupForm.querySelector('input[name="password2"]');
     
-    // Real-time validation for email format
-    if (emailInput) {
-        emailInput.addEventListener('blur', function() {
-            validateEmail(emailInput);
-        });
-    }
-    
-    // Password strength indicator
+    // Password strength indicator feedback on input
     if (passwordInput) {
         passwordInput.addEventListener('input', function() {
-            checkPasswordStrength(passwordInput);
+            displayPasswordStrength(passwordInput); // Changed function name for clarity
         });
     }
     
-    // Password matching validation
-    if (passwordInput && passwordConfirmInput) {
-        passwordConfirmInput.addEventListener('input', function() {
-            checkPasswordsMatch(passwordInput, passwordConfirmInput);
-        });
-    }
-    
-    // Form submission validation
-    if (signupForm) {
-        signupForm.addEventListener('submit', function(e) {
-            let isValid = true;
-            
-            // Validate email
-            if (emailInput && !validateEmail(emailInput)) {
-                isValid = false;
-            }
-            
-            // Validate password strength
-            if (passwordInput && !checkPasswordStrength(passwordInput)) {
-                isValid = false;
-            }
-            
-            // Check passwords match
-            if (passwordInput && passwordConfirmInput && 
-                !checkPasswordsMatch(passwordInput, passwordConfirmInput)) {
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                e.preventDefault();
-                console.log('Form validation failed');
-            }
-        });
-    }
+    // Removed email validation listener
+    // Removed password match listener
+    // Removed form submission validation listener (rely on server-side)
 }
 
-// Email validation function
-function validateEmail(emailInput) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValid = emailRegex.test(emailInput.value);
-    
-    if (!isValid && emailInput.value) {
-        emailInput.classList.add('is-invalid');
-        // Find or create error message
-        let errorDiv = emailInput.parentNode.querySelector('.error-message');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            emailInput.parentNode.appendChild(errorDiv);
-        }
-        errorDiv.textContent = 'Please enter a valid email address';
-    } else {
-        emailInput.classList.remove('is-invalid');
-        const errorDiv = emailInput.parentNode.querySelector('.error-message');
-        if (errorDiv) {
-            errorDiv.textContent = '';
-        }
-    }
-    
-    return isValid;
-}
+// Email validation function - REMOVED
+/* ... */
 
-// Password strength checker
-function checkPasswordStrength(passwordInput) {
+// Password strength checker - MODIFIED to only display feedback
+function displayPasswordStrength(passwordInput) {
     const password = passwordInput.value;
     let strength = 0;
     
@@ -111,53 +47,35 @@ function checkPasswordStrength(passwordInput) {
     let strengthIndicator = passwordInput.parentNode.querySelector('.password-strength');
     if (!strengthIndicator) {
         strengthIndicator = document.createElement('div');
-        strengthIndicator.className = 'password-strength help-text';
-        passwordInput.parentNode.appendChild(strengthIndicator);
+        strengthIndicator.className = 'password-strength help-text'; // Use help-text class for styling
+        // Insert after the input field or its help text if present
+        let helpText = passwordInput.parentNode.querySelector('.help-text');
+        if (helpText) {
+             helpText.parentNode.insertBefore(strengthIndicator, helpText.nextSibling);
+        } else { 
+             passwordInput.parentNode.appendChild(strengthIndicator);
+        }
     }
     
     // Update indicator based on strength
     if (password.length === 0) {
-        strengthIndicator.textContent = '';
-        return true;
+        strengthIndicator.textContent = ''; 
+        strengthIndicator.style.color = 'inherit'; // Reset color
     } else if (strength < 3) {
-        strengthIndicator.textContent = 'Weak password';
-        strengthIndicator.style.color = '#e74c3c';
-        return false;
-    } else if (strength === 3) {
-        strengthIndicator.textContent = 'Medium strength password';
-        strengthIndicator.style.color = '#f39c12';
-        return true;
+        strengthIndicator.textContent = 'Weak';
+        strengthIndicator.style.color = '#e74c3c'; // Red for weak
+    } else if (strength < 5) { // Changed threshold slightly for medium/strong split
+        strengthIndicator.textContent = 'Medium';
+        strengthIndicator.style.color = '#f39c12'; // Orange for medium
     } else {
-        strengthIndicator.textContent = 'Strong password';
-        strengthIndicator.style.color = '#27ae60';
-        return true;
+        strengthIndicator.textContent = 'Strong';
+        strengthIndicator.style.color = '#27ae60'; // Green for strong
     }
+    // REMOVED return true/false - no longer blocks submission
 }
 
-// Check if passwords match
-function checkPasswordsMatch(passwordInput, passwordConfirmInput) {
-    const passwordsMatch = passwordInput.value === passwordConfirmInput.value;
-    
-    if (!passwordsMatch && passwordConfirmInput.value) {
-        passwordConfirmInput.classList.add('is-invalid');
-        // Find or create error message
-        let errorDiv = passwordConfirmInput.parentNode.querySelector('.error-message');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            passwordConfirmInput.parentNode.appendChild(errorDiv);
-        }
-        errorDiv.textContent = 'Passwords do not match';
-    } else {
-        passwordConfirmInput.classList.remove('is-invalid');
-        const errorDiv = passwordConfirmInput.parentNode.querySelector('.error-message');
-        if (errorDiv) {
-            errorDiv.textContent = '';
-        }
-    }
-    
-    return passwordsMatch || !passwordConfirmInput.value;
-}
+// Check if passwords match - REMOVED
+/* ... */
 
 // Animate signup form elements
 function animateSignupForm() {

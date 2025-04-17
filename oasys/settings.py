@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import environ
+import os
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Initialize environment
 env = environ.Env(
@@ -23,11 +26,14 @@ env = environ.Env(
     STATIC_ROOT_PATH=(str, None),
     TEMPLATE_UPLOAD_PATH=(str, None),
 )
-environ.Env.read_env()  # Read the .env file
+
+
+
+env.read_env(env_file=os.path.join(BASE_DIR, '.env'))  # Read the .env file
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # File Storage Paths
 # These paths can be overridden using environment variables
@@ -108,7 +114,6 @@ WSGI_APPLICATION = 'oasys.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 
 DATABASES = {
     'default': env.db(),  # Automatically parses DATABASE_URL

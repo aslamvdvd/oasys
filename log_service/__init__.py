@@ -5,10 +5,7 @@ This package provides logging functionality for various system components.
 It is not intended to be exposed through URLs or views.
 """
 
-# Make the log_event function directly importable from the package
-from .logger import log_event
-
-# Make event management functions directly importable from the package
+# Import event management functions first to avoid circular imports
 from .events import (
     LogEventType,
     LogSeverity,
@@ -20,13 +17,8 @@ from .events import (
     get_all_event_info
 )
 
-# Removed imports from the deleted admin_logger.py
-# from log_service.admin_logger import (
-#     log_admin_action,
-#     log_admin_addition,
-#     log_admin_change,
-#     log_admin_deletion
-# )
+# Import choices
+from .choices import EventType, LogLevel
 
 # Make key components easily accessible (optional, but common practice)
 from .utils import (
@@ -49,12 +41,17 @@ from .utils import (
     # Admin helpers are usually used only by middleware, might not need exposure here
 )
 
+# Import log_event after all other imports to avoid circular dependencies
+from .logger import log_event
+
 __all__ = [
     # Core function
     'log_event',
     # Enums
     'LogEventType',
     'LogSeverity',
+    'EventType',
+    'LogLevel',
     # Event registry functions
     'register_event', 
     'is_event_registered',

@@ -33,7 +33,7 @@ class SignupView(CreateView):
     Handles user registration using SignupForm.
     Logs user creation and automatically logs the user in.
     """
-    template_name = 'core/signup.html'
+    template_name = 'accounts/signup.html'
     form_class = SignupForm
     success_url = reverse_lazy('dashboard:home')
 
@@ -69,7 +69,7 @@ class CustomLoginView(LoginView):
     Handles user login using LoginForm and the custom EmailOrUsernameBackend.
     Logs successful and failed login attempts.
     """
-    template_name = 'core/login.html'
+    template_name = 'accounts/login.html'
     form_class = LoginForm
     redirect_authenticated_user = True # Redirect if already logged in
     authentication_form = LoginForm # Ensure correct form is used
