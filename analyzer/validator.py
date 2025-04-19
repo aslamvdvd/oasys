@@ -256,65 +256,16 @@ class TemplateValidator:
             logger.warning(f"No specific engine mapping for framework '{framework.value}'. Defaulting to STATIC.")
             return Engine.STATIC
 
-    def _get_dependencies(self) -> List[str]:
-        """Detects dependencies based on the detected engine/framework."""
-        dependencies = []
-        engine = self.detected_engine
-        framework = self.detected_framework
-        logger.info(f"Detecting dependencies for engine: {engine.value}, framework: {framework.value}")
-
-        if engine in [Engine.PYTHON_3_11]:
-            # Look for requirements.txt in standard locations
-            potential_files = ["requirements.txt", "requirements/base.txt", "requirements/production.txt"]
-            for file_name in potential_files:
-                req_path = self.extracted_path / file_name
-                if req_path.is_file():
-                    logger.info(f"Found Python requirements file: {req_path}")
-                    dependencies = parse_requirements_txt(req_path)
-                    break # Use the first one found
-            if not dependencies:
-                 logger.info("No standard requirements.txt file found for Python project.")
-
-        elif engine in [Engine.NODE_18]:
-            # Look for package.json
-            pkg_path = self.extracted_path / "package.json"
-            if pkg_path.is_file():
-                logger.info(f"Found Node package.json file: {pkg_path}")
-                dependencies = parse_package_json(pkg_path)
-            else:
-                 logger.info("No package.json file found for Node project.")
-
-        elif engine == Engine.STATIC:
-            logger.info("Static engine detected, no dependencies to parse.")
-        
-        else:
-            logger.warning(f"Dependency detection not implemented for engine: {engine.value}")
-            
-        return dependencies
-
     def _generate_engine_config(self):
-        """Generates the engine_config.json file."""
+        """Generates the engine_config.json file based on detected framework."""
         logger.info(f"Generating {ENGINE_CONFIG_FILENAME}... Using detected framework: {self.detected_framework.value}")
         engine_config_path = self.extracted_path / ENGINE_CONFIG_FILENAME
         
-        # --- Determine entry point (best guess) ---
         entry_point = None
-        potential_entries = [
-            f"{TEMPLATE_DIR_NAME}/index.html", 
-            "index.html",                  
-            "index.htm"                    
-        ]
-        for potential in potential_entries:
-            if (self.extracted_path / potential).is_file():
-                entry_point = potential
-                logger.info(f"Found potential entry point: {entry_point}")
-                break
-        if not entry_point:
-            entry_point = potential_entries[1] 
-            self._add_warning(f"Could not find standard entry point ({potential_entries[0]}, {potential_entries[1]}, {potential_entries[2]}). Defaulting to '{entry_point}'.")
-
-        # --- Determine static directory (best guess) ---
         static_dir = None
+        dependencies = []
+
+        # --- Determine Static Directory (Best Guess - runs first as it's generic) ---
         potential_static_dirs = [ "assets", "static", "public" ] 
         for potential_dir in potential_static_dirs:
             if (self.extracted_path / potential_dir).is_dir():
@@ -322,24 +273,101 @@ class TemplateValidator:
                 logger.info(f"Found potential static directory: {static_dir}")
                 break
         if not static_dir:
-            static_dir = STATIC_DIR_NAME 
+            static_dir = STATIC_DIR_NAME # Fallback to default 'static'
             self._add_warning(f"Could not find common static directory ({', '.join(potential_static_dirs)}). Defaulting to '{static_dir}'.")
 
-        # --- Detect Dependencies ---
-        dependencies = self._get_dependencies()
+        # --- Determine Entry Point & Dependencies (Framework Specific) ---
+        fw = self.detected_framework
+        engine = self.detected_engine
+
+        if fw in [Framework.HTML, Framework.REACT, Framework.VUE, Framework.ANGULAR]:
+            # For HTML and JS frameworks, find the primary HTML file
+            potential_entries = [
+                "index.html",                   # Common for static/root apps/builds
+                "index.htm",                    # Alternative static entry
+                "src/index.html",               # Common source location for Angular/others
+                "src/index.htm" 
+            ]
+            for potential in potential_entries:
+                if (self.extracted_path / potential).is_file():
+                    entry_point = potential
+                    logger.info(f"Found potential web entry point: {entry_point}")
+                    break
+            if not entry_point:
+                entry_point = "index.html" # Default for web serving if nothing else found
+                self._add_warning(f"Could not find standard web entry point ({', '.join(potential_entries)}). Defaulting to '{entry_point}'.")
+            
+            # JS frameworks also have dependencies
+            if engine == Engine.NODE_18:
+                pkg_path = self.extracted_path / "package.json"
+                if pkg_path.is_file():
+                    dependencies = parse_package_json(pkg_path)
+                else:
+                    self._add_warning(f"Node engine detected but package.json not found.")
+                    
+        elif fw == Framework.DJANGO:
+            # Look for wsgi.py or asgi.py
+            potential_entries = ["wsgi.py", "asgi.py"]
+            # Usually inside a project sub-directory named same as parent or 'src'
+            project_dirs = [d for d in self.extracted_path.iterdir() if d.is_dir() and d.name != '__pycache__']
+            project_dir_paths = [self.extracted_path / d.name for d in project_dirs] + [self.extracted_path] # Check root too
+            
+            found = False
+            for p_dir in project_dir_paths:
+                for potential in potential_entries:
+                     if (p_dir / potential).is_file():
+                        entry_point = str((p_dir / potential).relative_to(self.extracted_path))
+                        logger.info(f"Found potential Django entry point: {entry_point}")
+                        found = True
+                        break
+                if found: break
+            
+            if not entry_point:
+                self._add_warning(f"Could not find Django entry point ({potential_entries[0]}, {potential_entries[1]}) in common locations.")
+            
+            # Look for requirements.txt
+            req_path = self.extracted_path / "requirements.txt"
+            if req_path.is_file():
+                dependencies = parse_requirements_txt(req_path)
+            else: 
+                self._add_warning("Django project detected but no root requirements.txt found.")
+
+        elif fw == Framework.FLASK:
+            # Look for app.py or wsgi.py at the root
+            potential_entries = ["app.py", "wsgi.py"]
+            for potential in potential_entries:
+                if (self.extracted_path / potential).is_file():
+                    entry_point = potential
+                    logger.info(f"Found potential Flask entry point: {entry_point}")
+                    break
+            if not entry_point:
+                 self._add_warning(f"Could not find common Flask entry point ({potential_entries[0]}, {potential_entries[1]}) at root.")
+
+            # Look for requirements.txt
+            req_path = self.extracted_path / "requirements.txt"
+            if req_path.is_file():
+                dependencies = parse_requirements_txt(req_path)
+            else: 
+                self._add_warning("Flask project detected but no root requirements.txt found.")
+
+        else: # Includes Framework.UNKNOWN
+            logger.warning(f"Cannot determine specific entry point or dependencies for framework: {fw.value}")
+            # Attempt to find a default index.html anyway for basic serving possibility
+            if (self.extracted_path / "index.html").is_file(): entry_point = "index.html"
+            elif (self.extracted_path / "index.htm").is_file(): entry_point = "index.htm"
                 
+        # --- Assemble Config Data ---          
         config_data = {
-            "entry_point": entry_point,
+            "entry_point": entry_point, # Can be None
             "static_dir": static_dir, 
             "runtime": self.detected_engine.value,
-            "dependencies": dependencies, # Use detected dependencies
+            "dependencies": dependencies, 
             "framework": self.detected_framework.value,
-            # Get author from template_info if available
             "author": self.template_info.get('author_username', None) 
         }
         logger.debug(f"Generated engine config data: {config_data}")
 
-        # Validate the generated config
+        # --- Validate and Write --- 
         validation_errors = validate_json_schema(config_data, ENGINE_CONFIG_SCHEMA)
         if validation_errors:
             self._add_error(f"INTERNAL ERROR: Generated {ENGINE_CONFIG_FILENAME} failed validation: {validation_errors}", SchemaValidationError(errors=validation_errors))

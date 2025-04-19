@@ -2,8 +2,8 @@
   "type": "object",
   "properties": {
     "entry_point": {
-      "type": "string",
-      "description": "Relative path to the main template file (e.g., 'templates/index.html')."
+      "type": ["string", "null"],
+      "description": "Relative path to the primary file needed to run/serve the template. For HTML/JS frameworks, this is typically the main HTML file (e.g., 'index.html'). For Python frameworks, it's the WSGI/ASGI application file (e.g., 'wsgi.py', 'app.py'). Can be null if not applicable or detectable."
     },
     "static_dir": {
       "type": "string",
