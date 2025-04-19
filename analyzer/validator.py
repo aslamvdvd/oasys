@@ -15,7 +15,8 @@ from .exceptions import (
 )
 from .utils import (
     read_json_file, write_json_file, validate_json_schema,
-    METADATA_SCHEMA, ENGINE_CONFIG_SCHEMA
+    METADATA_SCHEMA, ENGINE_CONFIG_SCHEMA,
+    parse_requirements_txt, parse_package_json
 )
 from .framework_detector import detect_framework
 
@@ -244,15 +245,52 @@ class TemplateValidator:
 
     def _get_engine_for_framework(self, framework: Framework) -> Engine:
         """Maps a framework to its typical engine/runtime."""
-        # Simple mapping, could be more complex
         if framework in [Framework.DJANGO, Framework.FLASK]:
             return Engine.PYTHON_3_11
-        elif framework in [Framework.REACT, Framework.VUE]: # Add other JS frameworks
+        elif framework in [Framework.REACT, Framework.VUE, Framework.ANGULAR]: # Added Angular
             return Engine.NODE_18
         elif framework == Framework.HTML:
             return Engine.STATIC
         else:
-            return Engine.STATIC # Default for UNKNOWN or other cases
+            # Default for UNKNOWN or other cases
+            logger.warning(f"No specific engine mapping for framework '{framework.value}'. Defaulting to STATIC.")
+            return Engine.STATIC
+
+    def _get_dependencies(self) -> List[str]:
+        """Detects dependencies based on the detected engine/framework."""
+        dependencies = []
+        engine = self.detected_engine
+        framework = self.detected_framework
+        logger.info(f"Detecting dependencies for engine: {engine.value}, framework: {framework.value}")
+
+        if engine in [Engine.PYTHON_3_11]:
+            # Look for requirements.txt in standard locations
+            potential_files = ["requirements.txt", "requirements/base.txt", "requirements/production.txt"]
+            for file_name in potential_files:
+                req_path = self.extracted_path / file_name
+                if req_path.is_file():
+                    logger.info(f"Found Python requirements file: {req_path}")
+                    dependencies = parse_requirements_txt(req_path)
+                    break # Use the first one found
+            if not dependencies:
+                 logger.info("No standard requirements.txt file found for Python project.")
+
+        elif engine in [Engine.NODE_18]:
+            # Look for package.json
+            pkg_path = self.extracted_path / "package.json"
+            if pkg_path.is_file():
+                logger.info(f"Found Node package.json file: {pkg_path}")
+                dependencies = parse_package_json(pkg_path)
+            else:
+                 logger.info("No package.json file found for Node project.")
+
+        elif engine == Engine.STATIC:
+            logger.info("Static engine detected, no dependencies to parse.")
+        
+        else:
+            logger.warning(f"Dependency detection not implemented for engine: {engine.value}")
+            
+        return dependencies
 
     def _generate_engine_config(self):
         """Generates the engine_config.json file."""
@@ -262,9 +300,9 @@ class TemplateValidator:
         # --- Determine entry point (best guess) ---
         entry_point = None
         potential_entries = [
-            f"{TEMPLATE_DIR_NAME}/index.html", # Common for Django/Flask
-            "index.html",                   # Common for static/root apps
-            "index.htm"                     # Alternative static entry
+            f"{TEMPLATE_DIR_NAME}/index.html", 
+            "index.html",                  
+            "index.htm"                    
         ]
         for potential in potential_entries:
             if (self.extracted_path / potential).is_file():
@@ -272,27 +310,32 @@ class TemplateValidator:
                 logger.info(f"Found potential entry point: {entry_point}")
                 break
         if not entry_point:
-            entry_point = potential_entries[1] # Default to root index.html
+            entry_point = potential_entries[1] 
             self._add_warning(f"Could not find standard entry point ({potential_entries[0]}, {potential_entries[1]}, {potential_entries[2]}). Defaulting to '{entry_point}'.")
 
         # --- Determine static directory (best guess) ---
         static_dir = None
-        potential_static_dirs = [ "assets", "static", "public" ] # Common names
+        potential_static_dirs = [ "assets", "static", "public" ] 
         for potential_dir in potential_static_dirs:
             if (self.extracted_path / potential_dir).is_dir():
                 static_dir = potential_dir
                 logger.info(f"Found potential static directory: {static_dir}")
                 break
         if not static_dir:
-            static_dir = STATIC_DIR_NAME # Fallback to default 'static'
+            static_dir = STATIC_DIR_NAME 
             self._add_warning(f"Could not find common static directory ({', '.join(potential_static_dirs)}). Defaulting to '{static_dir}'.")
+
+        # --- Detect Dependencies ---
+        dependencies = self._get_dependencies()
                 
         config_data = {
             "entry_point": entry_point,
             "static_dir": static_dir, 
             "runtime": self.detected_engine.value,
-            "dependencies": [], # TODO: Implement dependency detection
-            "framework": self.detected_framework.value
+            "dependencies": dependencies, # Use detected dependencies
+            "framework": self.detected_framework.value,
+            # Get author from template_info if available
+            "author": self.template_info.get('author_username', None) 
         }
         logger.debug(f"Generated engine config data: {config_data}")
 
@@ -301,8 +344,6 @@ class TemplateValidator:
         if validation_errors:
             self._add_error(f"INTERNAL ERROR: Generated {ENGINE_CONFIG_FILENAME} failed validation: {validation_errors}", SchemaValidationError(errors=validation_errors))
             return
-
-        # Write the config file
         try:
             write_json_file(engine_config_path, config_data)
             logger.info(f"Successfully generated and wrote {ENGINE_CONFIG_FILENAME}")

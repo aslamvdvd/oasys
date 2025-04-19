@@ -8,9 +8,10 @@
     "template_uploaded"
   ],
   "admin": [
-    "object_created",
-    "admin_add_object",
     "admin_view_object_list",
+    "admin_add_object",
+    "object_created",
+    "admin_view_dashboard",
     "admin_added"
   ],
   "templator_activity": [

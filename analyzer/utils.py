@@ -100,6 +100,80 @@ def write_json_file(file_path: Path, data: Dict[str, Any]):
         logger.error(f"Unexpected error writing JSON file {file_path}: {e}")
         raise FileOperationError(f"Unexpected error writing JSON: {file_path}") from e
 
+# --- Dependency Parsing ---
+
+def parse_requirements_txt(file_path: Path) -> List[str]:
+    """Parses a requirements.txt file and returns a list of packages.
+    Handles basic lines, comments, and ignores options/empty lines.
+    Does not handle complex cases like URLs, editable installs, or hashes.
+    NOTE: For broader compatibility, consider using a dedicated parsing library.
+    """
+    dependencies = []
+    if not file_path.is_file():
+        logger.warning(f"Requirements file not found: {file_path}")
+        return dependencies
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                # Ignore comments and empty lines
+                if not line or line.startswith('#'):
+                    continue
+                # Ignore specific options (simple cases)
+                if line.startswith('-'):
+                    continue
+                # Extract package name (simple split on common version specifiers)
+                # This is basic and might not cover all edge cases perfectly.
+                package_name = line.split('==')[0].split('>=')[0].split('<=')[0].split('~=')[0].split('!=')[0].split('<')[0].split('>')[0].strip()
+                if package_name:
+                    dependencies.append(package_name)
+    except OSError as e:
+        logger.error(f"Could not read requirements file {file_path}: {e}")
+        # Don't raise, just return empty list or log error
+    except Exception as e:
+        logger.error(f"Unexpected error parsing requirements file {file_path}: {e}", exc_info=True)
+        
+    logger.info(f"Parsed {len(dependencies)} dependencies from {file_path}")
+    return dependencies
+
+def parse_package_json(file_path: Path) -> List[str]:
+    """Parses a package.json file and returns a list of production dependencies.
+    Optionally includes devDependencies if needed in the future.
+    """
+    dependencies = []
+    if not file_path.is_file():
+        logger.warning(f"package.json file not found: {file_path}")
+        return dependencies
+        
+    try:
+        data = read_json_file(file_path)
+        if data:
+            # Get production dependencies
+            prod_deps = data.get('dependencies', {})
+            if isinstance(prod_deps, dict):
+                dependencies.extend(list(prod_deps.keys()))
+            else:
+                logger.warning(f"'dependencies' key in {file_path} is not a dictionary.")
+                
+            # Optionally include devDependencies (currently commented out)
+            # dev_deps = data.get('devDependencies', {})
+            # if isinstance(dev_deps, dict):
+            #     dependencies.extend(list(dev_deps.keys()))
+            # else:
+            #      logger.warning(f"'devDependencies' key in {file_path} is not a dictionary.")
+                 
+            # Remove potential duplicates if devDeps were included
+            # dependencies = sorted(list(set(dependencies)))
+                 
+    except FileOperationError as e:
+        # Error already logged by read_json_file
+        pass # Expected if file is invalid JSON
+    except Exception as e:
+        logger.error(f"Unexpected error parsing package.json file {file_path}: {e}", exc_info=True)
+        
+    logger.info(f"Parsed {len(dependencies)} production dependencies from {file_path}")
+    return dependencies
+
 # --- Zip File Handling ---
 
 def extract_zip(zip_path: Path, extract_to: Path, max_size=100*1024*1024):

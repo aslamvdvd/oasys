@@ -1,0 +1,32 @@
+{
+  "entry_point": "index.html",
+  "static_dir": "static",
+  "runtime": "nodejs18",
+  "dependencies": [
+    "@angular/animations",
+    "@angular/cdk",
+    "@angular/common",
+    "@angular/compiler",
+    "@angular/core",
+    "@angular/forms",
+    "@angular/language-service",
+    "@angular/platform-browser",
+    "@angular/platform-browser-dynamic",
+    "@angular/router",
+    "@coreui/angular",
+    "@coreui/angular-chartjs",
+    "@coreui/chartjs",
+    "@coreui/coreui",
+    "@coreui/icons",
+    "@coreui/icons-angular",
+    "@coreui/utils",
+    "chart.js",
+    "lodash-es",
+    "ngx-scrollbar",
+    "rxjs",
+    "tslib",
+    "zone.js"
+  ],
+  "framework": "angular",
+  "author": "admin"
+}

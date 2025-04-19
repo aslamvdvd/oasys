@@ -23,6 +23,10 @@
     "framework": {
         "type": "string",
         "description": "The framework this template uses (matches metadata.framework)."
+    },
+    "author": {
+        "type": ["string", "null"],
+        "description": "Username of the template author/uploader (optional)."
     }
   },
   "required": ["entry_point", "static_dir", "runtime", "framework"]

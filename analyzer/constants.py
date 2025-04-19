@@ -7,6 +7,7 @@ class Framework(enum.Enum):
     DJANGO = "django"
     FLASK = "flask"
     REACT = "react"
+    ANGULAR = "angular"
     VUE = "vue"
     HTML = "html"  # Plain HTML/CSS/JS
     UNKNOWN = "unknown"

@@ -1,0 +1,17 @@
+{
+  "entry_point": "index.html",
+  "static_dir": "public",
+  "runtime": "nodejs18",
+  "dependencies": [
+    "@testing-library/jest-dom",
+    "@testing-library/react",
+    "@testing-library/user-event",
+    "emailjs-com",
+    "react",
+    "react-dom",
+    "react-scripts",
+    "smooth-scroll"
+  ],
+  "framework": "react",
+  "author": "admin"
+}

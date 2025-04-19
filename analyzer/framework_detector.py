@@ -55,6 +55,58 @@ def _check_react(extracted_path: Path) -> bool:
         
     return False
 
+def _check_vue(extracted_path: Path) -> bool:
+    """Check for characteristic Vue project structure and package.json."""
+    package_json_path = extracted_path / "package.json"
+    if not package_json_path.is_file():
+        return False
+    
+    try:
+        pkg_data = read_json_file(package_json_path)
+        if pkg_data and (
+            ("dependencies" in pkg_data and "vue" in pkg_data["dependencies"]) or \
+            ("devDependencies" in pkg_data and "vue" in pkg_data["devDependencies"])
+        ):
+            # Optional: Look for src/App.vue or main.js/ts for higher confidence
+            if (extracted_path / "src" / "App.vue").is_file() or \
+               (extracted_path / "src" / "main.js").is_file() or \
+               (extracted_path / "src" / "main.ts").is_file():
+                logger.debug("_check_vue: Found vue dependency and common src files.")
+                return True
+            else:
+                # Still return True if vue dependency found, even without common files
+                logger.debug("_check_vue: Found vue dependency in package.json.")
+                return True
+    except Exception as e:
+        logger.warning(f"Could not read or parse package.json for Vue check: {e}")
+        
+    logger.debug("_check_vue: No clear Vue indicators found.")
+    return False
+
+def _check_angular(extracted_path: Path) -> bool:
+    """Check for characteristic Angular project files (angular.json)."""
+    angular_json_path = extracted_path / "angular.json"
+    if angular_json_path.is_file():
+        logger.debug("_check_angular: Found angular.json")
+        return True
+    
+    # Optional: Add secondary check for @angular/core in package.json
+    # package_json_path = extracted_path / "package.json"
+    # if package_json_path.is_file():
+    #     try:
+    #         pkg_data = read_json_file(package_json_path)
+    #         if pkg_data and (
+    #             ("dependencies" in pkg_data and "@angular/core" in pkg_data["dependencies"]) or \
+    #             ("devDependencies" in pkg_data and "@angular/core" in pkg_data["devDependencies"])
+    #         ):
+    #             logger.debug("_check_angular: Found @angular/core in package.json")
+    #             return True
+    #     except Exception as e:
+    #         logger.warning(f"Could not read or parse package.json for Angular check: {e}")
+
+    logger.debug("_check_angular: No clear Angular indicators found.")
+    return False
+
 def _check_flask(extracted_path: Path) -> bool:
     """Check for Flask files and keywords within Python files."""
     has_flask_file = any((extracted_path / f).is_file() for f in FLASK_FILES)
@@ -108,28 +160,35 @@ def detect_framework(extracted_path: Path) -> Tuple[Framework, Engine]:
     final_framework = Framework.UNKNOWN
     final_engine = Engine.STATIC
 
-    # 1. Check for specific, distinguishable frameworks
+    # Order checks from most specific/reliable to least specific
     if _check_django(extracted_path):
         logger.info("Detected Framework: Django")
         final_framework, final_engine = Framework.DJANGO, Engine.PYTHON_3_11
+        
+    elif _check_angular(extracted_path):
+        logger.info("Detected Framework: Angular")
+        final_framework, final_engine = Framework.ANGULAR, Engine.NODE_18
         
     elif _check_react(extracted_path):
         logger.info("Detected Framework: React")
         final_framework, final_engine = Framework.REACT, Engine.NODE_18
         
+    elif _check_vue(extracted_path):
+        logger.info("Detected Framework: Vue")
+        final_framework, final_engine = Framework.VUE, Engine.NODE_18
+        
     elif _check_flask(extracted_path):
         logger.info("Detected Framework: Flask")
         final_framework, final_engine = Framework.FLASK, Engine.PYTHON_3_11
         
-    # 2. If no specific framework found, check for plain HTML indicators
+    # Check for plain HTML last
     elif _check_html(extracted_path):
         logger.info("Detected Framework: HTML (Static)")
         final_framework, final_engine = Framework.HTML, Engine.STATIC
 
-    # 3. Log final decision (UNKNOWN is the default)
+    # Log final decision (UNKNOWN is the default)
     else:
         logger.warning(f"Could not definitively detect framework in {extracted_path}. Classifying as UNKNOWN.")
-        # final_framework and final_engine remain UNKNOWN/STATIC
         
     logger.info(f"Final detected framework: {final_framework.value}, engine: {final_engine.value}")
     return final_framework, final_engine 

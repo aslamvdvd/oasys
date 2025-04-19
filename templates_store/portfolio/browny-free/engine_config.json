@@ -1,7 +1,0 @@
-{
-  "entry_point": "index.html",
-  "static_dir": "assets",
-  "runtime": "html",
-  "dependencies": [],
-  "framework": "html"
-}
