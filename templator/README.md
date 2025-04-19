@@ -54,10 +54,15 @@ templates_store/
 
 1. Admin creates a template category
 2. Admin uploads a template ZIP file (must contain 'static' and 'templates' folders)
-3. The system validates the ZIP file contents
-4. If valid, the ZIP is extracted to the appropriate directory
-5. The extraction path is stored in the Template object
-6. The template can now be used throughout the OASYS platform
+3.  The ZIP file contents are extracted to a designated directory (`settings.TEMPLATE_UPLOAD_PATH / <category_slug> / <template_slug>`).
+    *   **Security:** The extraction process includes checks to prevent zip bombs (uncompressed size limit: 400 MB, compression ratio limit) and path traversal attacks.
+4.  The `analyzer` app (if available) is invoked via `analyzer.validator.validate_template` to:
+    *   Perform structural checks.
+    *   Detect the framework.
+5. The system validates the ZIP file contents
+6. If valid, the ZIP is extracted to the appropriate directory
+7. The extraction path is stored in the Template object
+8. The template can now be used throughout the OASYS platform
 
 ## Logging
 

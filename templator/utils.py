@@ -10,14 +10,25 @@ from django.utils.translation import gettext_lazy as _
 
 # Import log service components
 try:
+    # Import analyzer components for secure extraction
+    from analyzer.exceptions import InvalidTemplateError, FileOperationError
+    HAS_ANALYZER_UTILS = True
     from log_service.logger import log_event
     from log_service.events import LogEventType, EVENT_TEMPLATE_UPLOADED, EVENT_TEMPLATE_DELETED, EVENT_TEMPLATE_ERROR
     HAS_LOG_SERVICE = True
-except ImportError:
-    HAS_LOG_SERVICE = False
-    # Dummy logger for fallback
-    logger = logging.getLogger(__name__)
-    def log_event(channel, data): logger.warning(f"Log service unavailable. Event: {channel}, Data: {data}")
+except ImportError as e:
+    # Check if it was the analyzer import that failed
+    if 'analyzer' in str(e):
+        HAS_ANALYZER_UTILS = False
+        logger = logging.getLogger(__name__) # Ensure logger is defined
+        logger.error("Failed to import exceptions from analyzer.utils. Some error handling might be degraded.")
+    else: # Log service import failed
+        # Assume analyzer is there if log service failed, but exceptions might be missing
+        HAS_ANALYZER_UTILS = True 
+        HAS_LOG_SERVICE = False
+        # Dummy logger for fallback
+        logger = logging.getLogger(__name__)
+        def log_event(channel, data): logger.warning(f"Log service unavailable. Event: {channel}, Data: {data}")
 
 # Use logger even if log_service is available for internal debug/info
 logger = logging.getLogger(__name__)
@@ -120,44 +131,121 @@ def validate_zip_contents(zip_file):
         _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Error validating ZIP: {str(e)}")
         raise ValidationError(_("An error occurred while validating the ZIP file."))
 
-def extract_template_zip(zip_file_path, extraction_path):
+def extract_template_zip(zip_file_path: Path, extraction_path: Path, max_size=400*1024*1024):
     """
-    Extract the ZIP file to the specified path.
-    Handle nested directories by extracting the contents of the root directory directly.
+    Extract the ZIP file to the specified path safely.
+    - Checks total uncompressed size.
+    - Checks compression ratio.
+    - Prevents path traversal.
+    - Handles nested directories by extracting the contents of a single root directory directly.
     
     Args:
         zip_file_path: Path to the ZIP file
         extraction_path: Path where the ZIP should be extracted
+        max_size: Maximum allowed total uncompressed size in bytes. 
+                  Defaults to 400 * 1024 * 1024 (400 MB).
         
     Returns:
         True if extraction was successful, raises exception otherwise
+    Raises:
+        InvalidTemplateError: For zip bombs, path traversal, size limits, bad zip files.
+        FileOperationError: For OS-level file errors during extraction/copying.
     """
+    total_uncompressed_size = 0
+    member_list = []
+
     try:
-        create_template_directory(extraction_path)
+        # --- Pre-extraction validation ---
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+            member_list = zip_ref.infolist()
+            
+            # Check total uncompressed size
+            for info in member_list:
+                total_uncompressed_size += info.file_size
+                if total_uncompressed_size > max_size:
+                    raise InvalidTemplateError(f"Zip file total uncompressed size exceeds maximum allowed size ({max_size // (1024*1024)}MB)")
+            
+            # Check compression ratio (basic zip bomb check)
+            zip_file_size = zip_file_path.stat().st_size
+            # Avoid division by zero for empty zip files; allow if size is 0
+            if zip_file_size > 0 and total_uncompressed_size / zip_file_size > 100: # Arbitrary ratio limit
+                raise InvalidTemplateError("Zip file has an unusually high compression ratio, possibly a zip bomb.")
+
+        # --- Extraction to temp dir and copy ---
+        create_template_directory(extraction_path) # Ensure target exists
+        
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
+            
+            # Extract all to temporary directory (already validated members)
             with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                # Note: extractall itself doesn't have traversal protection as strong as manual checks
+                # but we validate the final copy step below. Max size/ratio already checked.
                 zip_ref.extractall(temp_path)
+                
+            # Check for single root directory structure
             root_items = list(temp_path.iterdir())
+            source_dir = temp_path
             if len(root_items) == 1 and root_items[0].is_dir():
-                root_dir = root_items[0]
-                for item in root_dir.iterdir():
-                    dest = extraction_path / item.name
-                    if item.is_dir(): shutil.copytree(item, dest, dirs_exist_ok=True)
-                    else: shutil.copy2(item, dest)
+                source_dir = root_items[0] # Use the nested dir as source
+                logger.debug(f"Zip contains single root directory '{source_dir.name}', using its contents.")
             else:
-                for item in root_items:
-                    dest = extraction_path / item.name
-                    if item.is_dir(): shutil.copytree(item, dest, dirs_exist_ok=True)
-                    else: shutil.copy2(item, dest)
+                 logger.debug("Zip does not contain single root directory, using root contents.")
+            
+            # Copy items from source_dir (temp or nested temp) to final extraction_path
+            # Apply path traversal check during copy
+            final_extraction_path_resolved = extraction_path.resolve()
+            for item in source_dir.iterdir():
+                dest = extraction_path / item.name
+                dest_resolved = dest.resolve()
+                
+                # --- Path Traversal Check during copy ---
+                if not dest_resolved.is_relative_to(final_extraction_path_resolved):
+                     # Log the attempt before raising
+                     _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, 
+                                         error=f"Path traversal attempt detected during copy: source='{item}', intended_dest='{dest}'", 
+                                         details=f"Resolved dest '{dest_resolved}' not relative to '{final_extraction_path_resolved}'")
+                     raise InvalidTemplateError(f"Attempted path traversal during file copy: {item.name}")
+                     
+                # Perform the copy
+                try:
+                    if item.is_dir(): 
+                        shutil.copytree(item, dest, dirs_exist_ok=True)
+                    else: 
+                        shutil.copy2(item, dest)
+                except OSError as copy_err:
+                    _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"OS Error copying item {item.name} to {dest}: {copy_err}")
+                    raise FileOperationError(f"Error copying extracted file '{item.name}': {copy_err}") from copy_err
+                    
+        logger.info(f"Successfully extracted and copied zip {zip_file_path} to {extraction_path}")
         return True
+
+    except zipfile.BadZipFile as e:
+        _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Invalid/corrupted zip file: {zip_file_path} - {e}")
+        raise InvalidTemplateError(f"Invalid or corrupted zip file: {zip_file_path}") from e
+    except InvalidTemplateError as e: # Catch specific validation errors
+        _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Zip validation failed for {zip_file_path}: {e}")
+        raise # Re-raise to be caught by caller
+    except FileOperationError as e: # Catch specific file operation errors
+        _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"File operation error during extraction {zip_file_path}: {e}")
+        raise # Re-raise
+    except OSError as e: # Catch potential OS errors from file ops or tempfile creation
+         _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"OS Error during extraction process for {zip_file_path}: {e}")
+         # Wrap in FileOperationError if possible
+         exc_class = FileOperationError if HAS_ANALYZER_UTILS else OSError
+         raise exc_class(f"OS Error during extraction process: {e}") from e
     except Exception as e:
-        _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Failed to extract ZIP: {str(e)}")
+        _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Unexpected error extracting zip {zip_file_path}: {str(e)}")
+        # Clean up partially extracted files on generic exceptions
         if extraction_path.exists():
-            try: shutil.rmtree(extraction_path)
+            logger.error(f"Cleaning up target directory {extraction_path} after unexpected error.")
+            try: 
+                shutil.rmtree(extraction_path)
             except Exception as cleanup_e:
-                 _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Cleanup failed: {str(cleanup_e)}")
-        raise
+                 _log_templator_event(EVENT_TEMPLATE_ERROR, template=None, error=f"Target directory cleanup failed: {str(cleanup_e)}")
+        # Wrap in InvalidTemplateError if possible
+        exc_class = InvalidTemplateError if HAS_ANALYZER_UTILS else Exception
+        raise exc_class(f"Unexpected error during zip extraction: {zip_file_path}") from e
 
 def process_template_upload(template):
     """
@@ -182,9 +270,18 @@ def process_template_upload(template):
             shutil.rmtree(extraction_path)
         except OSError as e:
             _log_templator_event(EVENT_TEMPLATE_ERROR, template, error=f"Failed to clean up existing extraction directory {extraction_path}: {str(e)}")
-            raise FileOperationError(f"Failed to clean existing directory: {extraction_path}") from e
+            # Use FileOperationError if available, otherwise standard OSError
+            exc_class = FileOperationError if HAS_ANALYZER_UTILS else OSError
+            raise exc_class(f"Failed to clean existing directory: {extraction_path}") from e
             
-    extract_template_zip(zip_file_path, extraction_path) # Extract the zip
+    # Use the local, secured extraction function
+    try:
+        extract_template_zip(Path(zip_file_path), extraction_path)
+    except (InvalidTemplateError, FileOperationError) as e:
+        # Errors are logged within extract_template_zip
+        # Re-raise to be caught by the signal handler for cleanup/logging
+        raise e
+    
     logger.info(f"Successfully extracted {zip_file_path} to {extraction_path}")
     # Log the upload event (without framework info here, analyzer will log details)
     # _log_templator_event(EVENT_TEMPLATE_UPLOADED, template, extraction_path=str(extraction_path))
