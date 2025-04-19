@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "properties": {
+    "entry_point": {
+      "type": "string",
+      "description": "Relative path to the main template file (e.g., 'templates/index.html')."
+    },
+    "static_dir": {
+      "type": "string",
+      "description": "Relative path to the static assets directory (e.g., 'static/')."
+    },
+    "runtime": {
+      "type": "string",
+      "description": "Required runtime environment (e.g., 'python3.11', 'nodejs18', 'html')."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of dependencies required by the template (e.g., python packages, npm packages)."
+    },
+    "framework": {
+        "type": "string",
+        "description": "The framework this template uses (matches metadata.framework)."
+    }
+  },
+  "required": ["entry_point", "static_dir", "runtime", "framework"]
+} 

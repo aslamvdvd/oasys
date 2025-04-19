@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'accounts',  # Accounts app
     'log_service',  # System logging service
     'templator',  # Template management app
+    'analyzer',   # Template validation and metadata generation
 ]
 
 MIDDLEWARE = [
@@ -164,3 +165,38 @@ AUTHENTICATION_BACKENDS = [
     'accounts.backends.EmailOrUsernameBackend',  # custom backend
     'django.contrib.auth.backends.ModelBackend',  # default backend
 ]
+
+# Logging Configuration - Show DEBUG messages for analyzer on console
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG', # Show DEBUG level messages for handlers
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO', # Keep Django's own logs at INFO unless needed
+            'propagate': True,
+        },
+        'analyzer': { # Specific logger for our app
+            'handlers': ['console'],
+            'level': 'DEBUG', # Set the level for the analyzer logger
+            'propagate': False, # Don't send analyzer messages to root logger
+        },
+        'templator': { # Also show INFO for templator to see signal flow
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Add other app loggers here if needed
+    },
+    # Optional: Configure root logger if needed
+    # 'root': {
+    #     'handlers': ['console'],
+    #     'level': 'WARNING',
+    # },
+}

@@ -64,6 +64,13 @@ class Template(models.Model):
     )
     # Store the extraction path for reference
     extraction_path = models.CharField(max_length=255, blank=True)
+    # Store the detected framework (can be set by analyzer)
+    detected_framework = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text=_("Framework detected by the analyzer (e.g., django, react, html)")
+    )
     
     class Meta:
         verbose_name = _('Template')

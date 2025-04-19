@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the template."
+    },
+    "slug": {
+      "type": "string",
+      "description": "Unique identifier slug for the template."
+    },
+    "framework": {
+      "type": "string",
+      "description": "Detected or specified framework (e.g., 'django', 'react', 'html')."
+    },
+    "category": {
+      "type": "string",
+      "description": "Category slug the template belongs to."
+    },
+    "author": {
+      "type": "string",
+      "description": "Username of the template uploader."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the template."
+    }
+  },
+  "required": ["name", "slug", "framework", "category", "author", "version"]
+} 

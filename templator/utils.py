@@ -161,7 +161,8 @@ def extract_template_zip(zip_file_path, extraction_path):
 
 def process_template_upload(template):
     """
-    Process a template upload, including validation and extraction.
+    Process a template upload, primarily handling extraction.
+    Structural validation is deferred to the analyzer app.
     
     Args:
         template: Template model instance
@@ -170,27 +171,55 @@ def process_template_upload(template):
         Path where the template was extracted
     """
     zip_file_path = template.zip_file.path
-    validate_zip_contents(zip_file_path)
+    # Removed call to validate_zip_contents(zip_file_path) - Defer validation to analyzer
+    logger.info(f"Starting extraction process for {zip_file_path}")
     extraction_path = get_template_extraction_path(template.category.slug, template.slug)
-    extract_template_zip(zip_file_path, extraction_path)
-    _log_templator_event(EVENT_TEMPLATE_UPLOADED, template, extraction_path=str(extraction_path))
-    return extraction_path
-
-def cleanup_template_directory(template):
-    """
-    Remove a template's extracted files when the template is deleted.
     
-    Args:
-        template: The Template instance being deleted
-    """
-    if not template.extraction_path:
-        return
-    extraction_path = Path(template.extraction_path)
+    # Ensure the target directory is clean before extraction
     if extraction_path.exists():
+        logger.warning(f"Extraction path {extraction_path} already exists. Cleaning up before extraction.")
         try:
             shutil.rmtree(extraction_path)
-            _log_templator_event(EVENT_TEMPLATE_DELETED, template, extraction_path=str(extraction_path))
+        except OSError as e:
+            _log_templator_event(EVENT_TEMPLATE_ERROR, template, error=f"Failed to clean up existing extraction directory {extraction_path}: {str(e)}")
+            raise FileOperationError(f"Failed to clean existing directory: {extraction_path}") from e
+            
+    extract_template_zip(zip_file_path, extraction_path) # Extract the zip
+    logger.info(f"Successfully extracted {zip_file_path} to {extraction_path}")
+    # Log the upload event (without framework info here, analyzer will log details)
+    # _log_templator_event(EVENT_TEMPLATE_UPLOADED, template, extraction_path=str(extraction_path))
+    return extraction_path
+
+def cleanup_template_directory(extraction_path: Path):
+    """
+    Remove a template's extracted files directory.
+    Now accepts the path directly.
+    
+    Args:
+        extraction_path: The Path object for the directory to remove.
+    """
+    # Use the extraction_path directly (passed from signal)
+    if extraction_path and extraction_path.exists() and extraction_path.is_dir():
+        try:
+            shutil.rmtree(extraction_path)
+            logger.info(f"Successfully cleaned up directory: {extraction_path}")
+            # Logging the deletion event might be better handled in the signal or based on analyzer results
+            # _log_templator_event(EVENT_TEMPLATE_DELETED, template, extraction_path=str(extraction_path))
         except Exception as e:
-            _log_templator_event(EVENT_TEMPLATE_ERROR, template, 
-                                 error=f"Failed to delete dir {extraction_path}: {str(e)}",
-                                 extraction_path=str(extraction_path)) 
+            logger.error(f"Failed to delete directory {extraction_path}: {str(e)}")
+            # Optionally log this using _log_templator_event if needed, but might require template instance
+    elif extraction_path:
+        logger.warning(f"Cleanup requested for path {extraction_path}, but it does not exist or is not a directory.")
+
+# --- Deprecated/Removed --- 
+# validate_zip_contents is no longer called by process_template_upload
+# The logic is now handled by the analyzer app.
+
+# def validate_zip_contents(zip_file):
+#     """
+#     DEPRECATED: Validation moved to analyzer app.
+#     Validate that the uploaded ZIP file contains required folders.
+#     ...
+#     """
+#     # ... (original implementation commented out or removed)
+#     pass 
