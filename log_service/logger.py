@@ -67,8 +67,18 @@ def log_event(
         final_level = severity.name if severity else level.name # Use severity if provided
         final_event_name = event_name or event_type.name # Use specific name or fallback to type name
 
+        # Convert EventType to LogEventType if needed
+        try:
+            from .events import LogEventType
+            log_event_type = LogEventType(event_type.value)
+        except ValueError:
+            # Fallback if the event type cannot be converted
+            logger.warning(f"Could not convert EventType '{event_type.value}' to LogEventType, using default APPLICATION")
+            from .events import LogEventType
+            log_event_type = LogEventType.APPLICATION  # Default to APPLICATION
+
         log_entry = SystemLog(
-            event_type=event_type.value, # Keep original enum value for DB
+            event_type=log_event_type.value, # Keep original enum value for DB
             log_level=final_level,     # Store severity/level name
             user=user,
             source=final_source,
@@ -87,6 +97,39 @@ def log_event(
             log_entry.object_id = related_object.pk
 
         log_entry.save()
+
+        # Get path based on event type
+        log_file_path = _get_log_file_path(log_entry.timestamp.isoformat(timespec='microseconds').replace('+00:00', 'Z'), log_event_type)
+        
+        # Ensure directory exists with error handling
+        try:
+            log_file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Create a serializable dictionary instead of using __dict__ directly
+            serializable_log = {
+                "timestamp": log_entry.timestamp.isoformat(),
+                "event_type": log_entry.event_type,
+                "event_name": log_entry.event_name,
+                "log_level": log_entry.log_level,
+                "source": log_entry.source,
+                "details": log_entry.details,
+                "user_id": log_entry.user.pk if log_entry.user else None,
+                "username": log_entry.user.username if log_entry.user else None,
+                "ip_address": log_entry.ip_address,
+                "user_agent": log_entry.user_agent,
+                "target": log_entry.target,
+                "extra_data": log_entry.extra_data
+            }
+            
+            # Append JSON to file
+            with open(log_file_path, 'a') as f:
+                f.write(json.dumps(serializable_log, default=str) + '\n')
+            
+            # Debug log to confirm successful file writing
+            logger.debug(f"Successfully wrote log entry to {log_file_path}")
+            
+        except (OSError, PermissionError) as e:
+            logger.error(f"Failed to create log directory or write to log file at {log_file_path}: {e}", exc_info=True)
 
     except Exception as e:
         # Use standard Python logger as a fallback if DB logging fails
