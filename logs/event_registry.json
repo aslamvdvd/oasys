@@ -8,11 +8,13 @@
     "template_uploaded"
   ],
   "admin": [
-    "admin_view_object_list",
-    "admin_add_object",
+    "admin_login",
+    "admin_added",
+    "admin_logout",
     "object_created",
     "admin_view_dashboard",
-    "admin_added"
+    "admin_view_object_list",
+    "admin_add_object"
   ],
   "templator_activity": [
     "template_error",
