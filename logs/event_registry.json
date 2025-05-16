@@ -1,23 +1,25 @@
 {
-  "user_activity": [],
+  "user_activity": [
+    "dashboard_visit"
+  ],
   "space_activity": [],
   "social_media": [],
   "engine": [],
   "templator": [
-    "template_error",
-    "template_uploaded"
+    "template_uploaded",
+    "template_error"
   ],
   "admin": [
-    "admin_login",
     "admin_added",
-    "admin_logout",
-    "object_created",
     "admin_view_dashboard",
+    "admin_login",
+    "object_created",
     "admin_view_object_list",
-    "admin_add_object"
+    "admin_add_object",
+    "admin_logout"
   ],
   "templator_activity": [
-    "template_error",
-    "template_uploaded"
+    "template_uploaded",
+    "template_error"
   ]
 }
