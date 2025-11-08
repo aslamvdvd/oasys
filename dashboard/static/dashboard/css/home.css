@@ -1,0 +1,42 @@
+/* Dashboard Home Page Styles */
+
+.dashboard-welcome {
+    background: linear-gradient(135deg, #4285f4, #34a853);
+    color: white;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-heading {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.welcome-message {
+    margin-top: 10px;
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+/* Main content container */
+.dashboard-container {
+    padding: 25px 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 15px 10px;
+    }
+    
+    .dashboard-welcome {
+        padding: 20px;
+    }
+    
+    .welcome-heading {
+        font-size: 24px;
+    }
+} 

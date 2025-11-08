@@ -1,0 +1,71 @@
+/* Login Page Specific Styles */
+
+/* Modify the auth box for login */
+.login-container .auth-box {
+    padding: 35px;
+    max-width: 450px;
+}
+
+/* Style for the login button */
+.btn-login {
+    background-color: #3498db;
+    width: 100%;
+}
+
+.btn-login:hover {
+    background-color: #2980b9;
+}
+
+/* Adjust spacing for the login form */
+.login-form .form-row {
+    margin-bottom: 25px;
+}
+
+/* Forgot password link */
+.forgot-password-link {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.forgot-password-link:hover {
+    color: #3498db;
+}
+
+/* Error messages in login form */
+.login-form .error-message {
+    font-weight: 500;
+}
+
+/* Background color and border for input with errors */
+.login-form input:invalid,
+.login-form input.is-invalid {
+    border-color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.05);
+}
+
+/* Animation for the login form */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-container {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsive adjustments for login on smaller screens */
+@media (max-width: 768px) {
+    .login-container .auth-box {
+        padding: 25px 20px;
+    }
+    
+    .login-form .form-group label {
+        font-size: 14px;
+    }
+} 

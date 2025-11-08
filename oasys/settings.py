@@ -11,21 +11,56 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import environ
+import os
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Initialize environment
+env = environ.Env(
+    DEBUG=(bool, False),
+    SECRET_KEY=(str, ''),
+    DATABASE_URL=(str, 'sqlite:///db.sqlite3'),
+    LOGS_PATH=(str, None),
+    MEDIA_ROOT_PATH=(str, None),
+    STATIC_ROOT_PATH=(str, None),
+    TEMPLATE_UPLOAD_PATH=(str, None),
+)
+
+
+
+env.read_env(env_file=os.path.join(BASE_DIR, '.env'))  # Read the .env file
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# File Storage Paths
+# These paths can be overridden using environment variables
+LOGS_DIR = Path(env('LOGS_PATH')) if env('LOGS_PATH') else BASE_DIR / 'logs'
+MEDIA_ROOT = Path(env('MEDIA_ROOT_PATH')) if env('MEDIA_ROOT_PATH') else BASE_DIR / 'media'
+STATIC_ROOT = Path(env('STATIC_ROOT_PATH')) if env('STATIC_ROOT_PATH') else BASE_DIR / 'staticfiles'
+TEMPLATE_UPLOAD_PATH = Path(env('TEMPLATE_UPLOAD_PATH')) if env('TEMPLATE_UPLOAD_PATH') else BASE_DIR / 'templates_store'
+
+# Create necessary directories with error handling
+for directory in [LOGS_DIR, MEDIA_ROOT, STATIC_ROOT, TEMPLATE_UPLOAD_PATH]:
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        import sys
+        print(f"Warning: Could not create directory {directory}: {e}", file=sys.stderr)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ozc5u4u&k-f(rdy5sybq78w^((o6%&^mr$&a+&xvq-qrkefhfx'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -37,6 +72,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',  # Core app
+    'dashboard',  # Dashboard app
+    'accounts',  # Accounts app
+    'log_service',  # System logging service
+    'templator',  # Template management app
 ]
 
 MIDDLEWARE = [
@@ -45,8 +85,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'log_service.middleware.ExceptionLoggingMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'log_service.middleware.AdminActivityMiddleware',  # Admin activity logging
 ]
 
 ROOT_URLCONF = 'oasys.urls'
@@ -54,7 +96,7 @@ ROOT_URLCONF = 'oasys.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -74,10 +116,7 @@ WSGI_APPLICATION = 'oasys.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db(),  # Automatically parses DATABASE_URL
 }
 
 
@@ -115,9 +154,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = env('STATIC_URL', default='static/')
+MEDIA_URL = env('MEDIA_URL', default='media/')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameBackend',  # custom backend
+    'django.contrib.auth.backends.ModelBackend',  # default backend
+]

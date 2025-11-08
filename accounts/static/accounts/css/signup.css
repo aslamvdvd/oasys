@@ -1,0 +1,102 @@
+/* Signup Page Specific Styles */
+
+/* Modify the auth box for signup */
+.signup-container .auth-box {
+    padding: 30px;
+    max-width: 600px;
+}
+
+/* Style for the signup button */
+.btn-signup {
+    background-color: #2ecc71;
+    width: 100%;
+}
+
+.btn-signup:hover {
+    background-color: #27ae60;
+}
+
+/* Adjust spacing for the signup form */
+.signup-form .form-row {
+    margin-bottom: 20px;
+}
+
+/* Two columns layout for form fields */
+.form-row.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* Three columns layout for form fields */
+.form-row.three-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+}
+
+/* Help text styling specifically for signup */
+.signup-form .help-text {
+    font-size: 11px;
+    color: #95a5a6;
+    line-height: 1.4;
+}
+
+/* Error messages in signup form */
+.signup-form .error-message {
+    font-weight: 500;
+}
+
+/* Non-field errors container */
+.non-field-errors {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+/* Background color and border for input with errors */
+.signup-form input:invalid,
+.signup-form input.is-invalid {
+    border-color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.05);
+}
+
+/* Animation for the signup form */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.signup-container {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsive adjustments for signup on smaller screens */
+@media (max-width: 768px) {
+    .signup-container .auth-box {
+        padding: 20px 15px;
+    }
+    
+    .signup-form .form-group label {
+        font-size: 14px;
+    }
+    
+    .signup-form .help-text {
+        font-size: 10px;
+    }
+    
+    .form-row.two-columns,
+    .form-row.three-columns {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+} 

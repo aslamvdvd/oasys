@@ -1,0 +1,17 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Welcome to OASYS{% endblock %}
+
+{% block content %}
+<div class="welcome-container">
+    <div class="welcome-content">
+        <h2 class="welcome-title">Welcome to oasys</h2>
+        <p class="welcome-message">Your Optimized Autonomous System</p>
+        
+        <div class="cta-buttons">
+            <a href="{% url 'accounts:login' %}" class="btn btn-login">Login</a>
+            <a href="{% url 'accounts:signup' %}" class="btn btn-signup">Sign Up</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

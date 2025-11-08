@@ -1,0 +1,28 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Dashboard - OASYS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <h2 class="welcome-heading">
+        Welcome, 
+        {% if user.first_name or user.middle_name or user.last_name %}
+            {{ user.first_name }} {{ user.middle_name }} {{ user.last_name }}!
+        {% elif user.first_name or user.last_name %}
+            {{ user.first_name }} {{ user.last_name }}!
+        {% else %}
+            {{ user.username }}!
+        {% endif %}
+    </h2>
+    <p>This is your dashboard where you can manage your profile and spaces.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/home.js' %}"></script>
+{% endblock %} 

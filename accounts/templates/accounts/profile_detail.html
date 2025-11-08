@@ -1,0 +1,39 @@
+{% extends 'accounts/base.html' %} 
+{% load i18n %}
+
+{% block title %}{% trans "User Profile" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{% trans "User Profile" %}</h2>
+    <hr>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{ user.get_full_name|default:user.username }}</h5>
+            <p class="card-text">
+                <strong>{% trans "Username:" %}</strong> {{ user.username }}<br>
+                <strong>{% trans "Email:" %}</strong> {{ user.email }}<br>
+                {% if user.first_name %}<strong>{% trans "First Name:" %}</strong> {{ user.first_name }}<br>{% endif %}
+                {% if user.middle_name %}<strong>{% trans "Middle Name:" %}</strong> {{ user.middle_name }}<br>{% endif %}
+                {% if user.last_name %}<strong>{% trans "Last Name:" %}</strong> {{ user.last_name }}<br>{% endif %}
+                {% if user.bio %}<strong>{% trans "Bio:" %}</strong><br>{{ user.bio|linebreaksbr }}{% endif %}
+            </p>
+            <div class="d-flex gap-2">
+                <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">{% trans "Edit Profile" %}</a>
+                <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary">{% trans "Change Password" %}</a>
+                <a href="{% url 'accounts:account_delete' %}" class="btn btn-danger ms-auto">{% trans "Delete Account" %}</a> 
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

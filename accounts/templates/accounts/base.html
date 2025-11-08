@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}oasys - User Authentication{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'accounts/css/base_accounts.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="accounts-header">
+        <div class="container">
+            <div class="brand">
+                <h1><a href="{% url 'core:welcome' %}">OASYS</a></h1>
+            </div>
+            <nav class="main-nav">
+                <ul class="nav-list">
+                    <li><a href="{% url 'core:welcome' %}" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'dashboard:home' %}" class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}">Dashboard</a></li>
+                        <li><a href="{% url 'accounts:logout' %}" class="nav-link">Logout</a></li>
+                    {% else %}
+                        <li><a href="{% url 'accounts:login' %}" class="nav-link {% if request.path == '/accounts/login/' %}active{% endif %}">Login</a></li>
+                        <li><a href="{% url 'accounts:signup' %}" class="nav-link {% if request.path == '/accounts/signup/' %}active{% endif %}">Sign Up</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="accounts-content">
+        <div class="container">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <footer class="accounts-footer">
+        <div class="container">
+            <p>&copy; {% now "Y" %} oasys - Optimized Autonomous System</p>
+        </div>
+    </footer>
+
+    {% load static %}
+    <script src="{% static 'accounts/js/base_accounts.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

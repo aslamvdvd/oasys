@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}oasys - Optimized Autonomous System{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/css/welcome.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="platform-header">
+        <div class="container">
+            <div class="brand">
+                <h1>oasys</h1>
+            </div>
+            <nav class="main-nav">
+                {% block nav_links %}
+                <ul class="nav-list">
+                    <!-- <li><a href="{% url 'core:welcome' %}" class="nav-link">Home</a></li> -->
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'dashboard:home' %}" class="nav-link">Dashboard</a></li>
+                        <li><a href="{% url 'accounts:logout' %}" class="nav-link">Logout</a></li>
+                    {% endif %}
+                </ul>
+                {% endblock %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="content">
+        <div class="container">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <footer class="platform-footer">
+        <div class="container">
+            <p>&copy; {% now "Y" %} oasys - Optimized Autonomous System</p>
+        </div>
+    </footer>
+
+    {% load static %}
+    <script src="{% static 'core/js/welcome.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

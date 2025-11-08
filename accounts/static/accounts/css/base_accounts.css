@@ -1,0 +1,292 @@
+/* Base styles for accounts app */
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header Styles */
+.accounts-header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 15px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.accounts-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.brand h1 {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.brand h1 a {
+    color: white;
+    text-decoration: none;
+}
+
+.main-nav {
+    display: flex;
+}
+
+.nav-list {
+    display: flex;
+    list-style: none;
+}
+
+.nav-list li {
+    margin-left: 20px;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 0;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: white;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: white;
+}
+
+/* Main Content */
+.accounts-content {
+    padding: 40px 0;
+    min-height: calc(100vh - 134px);
+}
+
+/* Messages */
+.messages {
+    margin: 20px 0;
+    width: 100%;
+}
+
+.message {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    position: relative;
+    font-size: 16px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.message.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.message.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.message-close {
+    float: right;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Auth Box Common Styles */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.auth-box {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    width: 100%;
+    max-width: 500px;
+}
+
+.auth-title {
+    font-size: 24px;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.auth-subtitle {
+    color: #7f8c8d;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.auth-form {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 5px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.help-text {
+    color: #7f8c8d;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 25px;
+}
+
+.auth-links {
+    text-align: center;
+    margin-top: 20px;
+    color: #7f8c8d;
+}
+
+.auth-links p {
+    margin-bottom: 10px;
+}
+
+.auth-links a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 12px 30px;
+    border-radius: 4px;
+    background-color: #3498db;
+    color: white;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer Styles */
+.accounts-footer {
+    background-color: #2c3e50;
+    color: white;
+    padding: 15px 0;
+    text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .accounts-header .container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .brand {
+        margin-bottom: 15px;
+    }
+    
+    .nav-list {
+        margin-top: 10px;
+    }
+    
+    .nav-list li {
+        margin: 0 10px;
+    }
+    
+    .form-row.two-columns {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .auth-box {
+        padding: 20px;
+    }
+} 
